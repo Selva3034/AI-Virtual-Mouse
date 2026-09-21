@@ -17,7 +17,7 @@ FRAME_HEIGHT = 720
 # Cursor smoothing
 SMOOTHING = 0.25
 
-# Gesture thresholds
+# Click thresholds
 LEFT_CLICK_THRESHOLD = 35
 RIGHT_CLICK_THRESHOLD = 35
 
@@ -34,6 +34,9 @@ DRAG_HOLD_TIME = 0.7
 SCROLL_THRESHOLD = 12
 SCROLL_SPEED = 2
 
+# Pause / Resume
+PAUSE_HOLD_TIME = 1.0
+
 
 # =========================================================
 # MAIN
@@ -47,13 +50,18 @@ def main():
 
     print("Starting camera...")
 
-    # -----------------------------------------------------
+    # =====================================================
     # CAMERA
-    # -----------------------------------------------------
+    # =====================================================
 
-    camera = cv2.VideoCapture(CAMERA_INDEX)
+    # DirectShow is more reliable on Windows
+    camera = cv2.VideoCapture(
+        CAMERA_INDEX,
+        cv2.CAP_DSHOW
+    )
 
     if not camera.isOpened():
+
         print("ERROR: Could not open camera.")
         return
 
@@ -69,9 +77,9 @@ def main():
 
     print("Camera started successfully.")
 
-    # -----------------------------------------------------
+    # =====================================================
     # HAND TRACKER
-    # -----------------------------------------------------
+    # =====================================================
 
     hand_tracker = HandTracker(
         max_num_hands=1,
@@ -81,9 +89,9 @@ def main():
 
     print("MediaPipe hand tracking started.")
 
-    # -----------------------------------------------------
+    # =====================================================
     # SCREEN
-    # -----------------------------------------------------
+    # =====================================================
 
     screen_width, screen_height = pyautogui.size()
 
@@ -124,7 +132,16 @@ def main():
     scrolling = False
 
     # =====================================================
-    # START
+    # PAUSE VARIABLES
+    # =====================================================
+
+    paused = False
+
+    fist_start_time = None
+    pause_gesture_active = False
+
+    # =====================================================
+    # START MESSAGE
     # =====================================================
 
     print()
@@ -132,14 +149,15 @@ def main():
     print()
 
     print("CONTROLS:")
-    print("Move INDEX finger              -> Move cursor")
-    print("Quick Thumb + INDEX            -> LEFT CLICK")
-    print("Quick pinch twice              -> DOUBLE CLICK")
-    print("Hold Thumb + INDEX             -> DRAG")
-    print("Release Thumb + INDEX          -> DROP")
-    print("INDEX + MIDDLE pinch            -> RIGHT CLICK")
-    print("INDEX + MIDDLE extended        -> SCROLL")
-    print("Press ESC                      -> Exit")
+    print("Move INDEX finger          -> Move cursor")
+    print("Quick Thumb + INDEX       -> LEFT CLICK")
+    print("Quick pinch twice         -> DOUBLE CLICK")
+    print("Hold Thumb + INDEX        -> DRAG")
+    print("Release Thumb + INDEX     -> DROP")
+    print("INDEX + MIDDLE pinch      -> RIGHT CLICK")
+    print("Two fingers extended      -> SCROLL")
+    print("Closed fist for 1 sec     -> PAUSE / RESUME")
+    print("Press ESC                 -> Exit")
     print()
 
     # =====================================================
@@ -150,9 +168,9 @@ def main():
 
         while True:
 
-            # -------------------------------------------------
+            # =================================================
             # READ CAMERA
-            # -------------------------------------------------
+            # =================================================
 
             success, frame = camera.read()
 
@@ -164,9 +182,9 @@ def main():
             # Mirror camera
             frame = cv2.flip(frame, 1)
 
-            # -------------------------------------------------
+            # =================================================
             # HAND DETECTION
-            # -------------------------------------------------
+            # =================================================
 
             results = hand_tracker.process_frame(frame)
 
@@ -185,139 +203,50 @@ def main():
 
             if landmarks:
 
+                # -------------------------------------------------
+                # LANDMARKS
+                # -------------------------------------------------
+
                 thumb = landmarks[4]
                 index = landmarks[8]
                 middle = landmarks[12]
+                ring = landmarks[16]
+                pinky = landmarks[20]
 
-                # Extra landmarks for finger-state detection
                 index_mcp = landmarks[5]
                 middle_mcp = landmarks[9]
+                ring_mcp = landmarks[13]
+                pinky_mcp = landmarks[17]
 
                 camera_height, camera_width, _ = frame.shape
 
                 # =================================================
-                # INDEX POSITION
+                # FINGER STATES
                 # =================================================
 
-                index_x = int(
-                    index.x * camera_width
+                index_folded = (
+                    index.y > index_mcp.y
                 )
 
-                index_y = int(
-                    index.y * camera_height
+                middle_folded = (
+                    middle.y > middle_mcp.y
                 )
 
-                # =================================================
-                # SCREEN POSITION
-                # =================================================
-
-                target_x = int(
-                    index.x * screen_width
+                ring_folded = (
+                    ring.y > ring_mcp.y
                 )
 
-                target_y = int(
-                    index.y * screen_height
+                pinky_folded = (
+                    pinky.y > pinky_mcp.y
                 )
 
-                # =================================================
-                # CURSOR SMOOTHING
-                # =================================================
-
-                current_x = (
-                    previous_x
-                    + (target_x - previous_x)
-                    * SMOOTHING
+                # Closed fist
+                fist_detected = (
+                    index_folded
+                    and middle_folded
+                    and ring_folded
+                    and pinky_folded
                 )
-
-                current_y = (
-                    previous_y
-                    + (target_y - previous_y)
-                    * SMOOTHING
-                )
-
-                current_x = int(current_x)
-                current_y = int(current_y)
-
-                # -------------------------------------------------
-                # MOVE CURSOR
-                # -------------------------------------------------
-
-                pyautogui.moveTo(
-                    current_x,
-                    current_y,
-                    duration=0
-                )
-
-                previous_x = current_x
-                previous_y = current_y
-
-                # -------------------------------------------------
-                # DRAW INDEX FINGERTIP
-                # -------------------------------------------------
-
-                cv2.circle(
-                    frame,
-                    (index_x, index_y),
-                    10,
-                    (0, 255, 0),
-                    -1
-                )
-
-                # =================================================
-                # THUMB POSITION
-                # =================================================
-
-                thumb_x = int(
-                    thumb.x * camera_width
-                )
-
-                thumb_y = int(
-                    thumb.y * camera_height
-                )
-
-                # =================================================
-                # INDEX POSITION
-                # =================================================
-
-                index_point_x = int(
-                    index.x * camera_width
-                )
-
-                index_point_y = int(
-                    index.y * camera_height
-                )
-
-                # =================================================
-                # MIDDLE POSITION
-                # =================================================
-
-                middle_x = int(
-                    middle.x * camera_width
-                )
-
-                middle_y = int(
-                    middle.y * camera_height
-                )
-
-                # =================================================
-                # LEFT CLICK / DRAG DISTANCE
-                # =================================================
-
-                left_distance = (
-                    (thumb_x - index_point_x) ** 2
-                    +
-                    (thumb_y - index_point_y) ** 2
-                ) ** 0.5
-
-                # =================================================
-                # RIGHT CLICK DISTANCE
-                # =================================================
-
-                right_distance = (
-                    (index_point_x - middle_x) ** 2
-                    +
-                    (index_point_y - middle_y) ** 2
-                ) ** 0.5
 
                 # =================================================
                 # CURRENT TIME
@@ -326,353 +255,625 @@ def main():
                 current_time = time.time()
 
                 # =================================================
-                # FINGER EXTENSION DETECTION
+                # PAUSE / RESUME GESTURE
                 # =================================================
 
-                index_extended = (
-                    index.y < index_mcp.y
-                )
+                if fist_detected:
 
-                middle_extended = (
-                    middle.y < middle_mcp.y
-                )
+                    if fist_start_time is None:
 
-                # =================================================
-                # SCROLL MODE
-                # =================================================
+                        fist_start_time = current_time
 
-                scroll_gesture = (
-                    index_extended
-                    and middle_extended
-                    and right_distance > RIGHT_CLICK_THRESHOLD
-                    and not left_pinch_active
-                    and not dragging
-                )
-
-                if scroll_gesture:
-
-                    scrolling = True
-
-                    # Start tracking scroll position
-                    if previous_scroll_y is None:
-
-                        previous_scroll_y = (
-                            index_y + middle_y
-                        ) / 2
-
-                    current_scroll_y = (
-                        index_y + middle_y
-                    ) / 2
-
-                    scroll_difference = (
-                        current_scroll_y
-                        - previous_scroll_y
+                    fist_duration = (
+                        current_time
+                        - fist_start_time
                     )
 
-                    # -------------------------------------------------
-                    # SCROLL DOWN
-                    # -------------------------------------------------
-
-                    if scroll_difference > SCROLL_THRESHOLD:
-
-                        pyautogui.scroll(
-                            -SCROLL_SPEED
-                        )
-
-                        cv2.putText(
-                            frame,
-                            "SCROLL DOWN",
-                            (20, 120),
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            1,
-                            (0, 165, 255),
-                            2
-                        )
-
-                    # -------------------------------------------------
-                    # SCROLL UP
-                    # -------------------------------------------------
-
-                    elif scroll_difference < -SCROLL_THRESHOLD:
-
-                        pyautogui.scroll(
-                            SCROLL_SPEED
-                        )
-
-                        cv2.putText(
-                            frame,
-                            "SCROLL UP",
-                            (20, 120),
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            1,
-                            (0, 165, 255),
-                            2
-                        )
-
-                    else:
-
-                        cv2.putText(
-                            frame,
-                            "SCROLL MODE",
-                            (20, 120),
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            0.8,
-                            (0, 165, 255),
-                            2
-                        )
-
-                    previous_scroll_y = current_scroll_y
-
-                else:
-
-                    # Reset scroll tracking
-                    scrolling = False
-                    previous_scroll_y = None
-
-                # =================================================
-                # LEFT PINCH / DRAG
-                # =================================================
-
-                if (
-                    left_distance < LEFT_CLICK_THRESHOLD
-                    and not scrolling
-                ):
-
-                    # -------------------------------------------------
-                    # PINCH START
-                    # -------------------------------------------------
-
-                    if not left_pinch_active:
-
-                        left_pinch_active = True
-
-                        pinch_start_time = current_time
-
-                    # -------------------------------------------------
-                    # START DRAG
-                    # -------------------------------------------------
-
+                    # Toggle only once per fist
                     if (
-                        pinch_start_time is not None
-                        and not dragging
-                        and
-                        current_time - pinch_start_time
-                        >= DRAG_HOLD_TIME
+                        fist_duration >= PAUSE_HOLD_TIME
+                        and not pause_gesture_active
                     ):
 
-                        pyautogui.mouseDown()
+                        paused = not paused
 
-                        dragging = True
+                        pause_gesture_active = True
 
-                        print("DRAG STARTED")
+                        # Safety: release drag
+                        if paused and dragging:
 
-                    # -------------------------------------------------
-                    # DRAGGING
-                    # -------------------------------------------------
+                            try:
+                                pyautogui.mouseUp()
+                            except:
+                                pass
 
-                    if dragging:
+                            dragging = False
 
-                        cv2.putText(
-                            frame,
-                            "DRAGGING",
-                            (20, 120),
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            1,
-                            (255, 0, 0),
-                            2
-                        )
+                            print(
+                                "DRAG STOPPED - PAUSED"
+                            )
 
-                    else:
+                        # Reset gestures
+                        left_pinch_active = False
+                        right_pinch_active = False
+                        pinch_start_time = None
+                        previous_scroll_y = None
+                        scrolling = False
 
-                        cv2.putText(
-                            frame,
-                            "PINCH",
-                            (20, 120),
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            0.8,
-                            (0, 255, 255),
-                            2
-                        )
+                        if paused:
+
+                            print()
+                            print(
+                                "VIRTUAL MOUSE PAUSED"
+                            )
+
+                        else:
+
+                            print()
+                            print(
+                                "VIRTUAL MOUSE RESUMED"
+                            )
+
+                else:
+
+                    fist_start_time = None
+                    pause_gesture_active = False
 
                 # =================================================
-                # LEFT PINCH RELEASE
+                # PAUSED MODE
+                # =================================================
+
+                if paused:
+
+                    # Dark overlay
+                    overlay = frame.copy()
+
+                    cv2.rectangle(
+                        overlay,
+                        (0, 0),
+                        (camera_width, camera_height),
+                        (0, 0, 0),
+                        -1
+                    )
+
+                    frame = cv2.addWeighted(
+                        overlay,
+                        0.35,
+                        frame,
+                        0.65,
+                        0
+                    )
+
+                    cv2.putText(
+                        frame,
+                        "PAUSED",
+                        (
+                            camera_width // 2 - 100,
+                            100
+                        ),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        1.5,
+                        (0, 255, 255),
+                        3
+                    )
+
+                    cv2.putText(
+                        frame,
+                        "Hold CLOSED FIST to resume",
+                        (
+                            camera_width // 2 - 220,
+                            145
+                        ),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.7,
+                        (255, 255, 255),
+                        2
+                    )
+
+                # =================================================
+                # ACTIVE MODE
                 # =================================================
 
                 else:
 
-                    if dragging:
+                    # =================================================
+                    # INDEX POSITION
+                    # =================================================
 
-                        pyautogui.mouseUp()
+                    index_x = int(
+                        index.x * camera_width
+                    )
 
-                        dragging = False
+                    index_y = int(
+                        index.y * camera_height
+                    )
 
-                        pinch_start_time = None
+                    # =================================================
+                    # SCREEN POSITION
+                    # =================================================
 
-                        print("DRAG ENDED")
+                    target_x = int(
+                        index.x * screen_width
+                    )
 
-                        cv2.putText(
-                            frame,
-                            "DROP",
-                            (20, 120),
-                            cv2.FONT_HERSHEY_SIMPLEX,
-                            1,
-                            (255, 0, 0),
-                            2
+                    target_y = int(
+                        index.y * screen_height
+                    )
+
+                    # =================================================
+                    # CURSOR SMOOTHING
+                    # =================================================
+
+                    current_x = (
+                        previous_x
+                        + (
+                            target_x
+                            - previous_x
+                        ) * SMOOTHING
+                    )
+
+                    current_y = (
+                        previous_y
+                        + (
+                            target_y
+                            - previous_y
+                        ) * SMOOTHING
+                    )
+
+                    current_x = int(current_x)
+                    current_y = int(current_y)
+
+                    # =================================================
+                    # MOVE CURSOR
+                    # =================================================
+
+                    pyautogui.moveTo(
+                        current_x,
+                        current_y,
+                        duration=0
+                    )
+
+                    previous_x = current_x
+                    previous_y = current_y
+
+                    # =================================================
+                    # DRAW INDEX
+                    # =================================================
+
+                    cv2.circle(
+                        frame,
+                        (index_x, index_y),
+                        10,
+                        (0, 255, 0),
+                        -1
+                    )
+
+                    # =================================================
+                    # THUMB POSITION
+                    # =================================================
+
+                    thumb_x = int(
+                        thumb.x * camera_width
+                    )
+
+                    thumb_y = int(
+                        thumb.y * camera_height
+                    )
+
+                    # =================================================
+                    # MIDDLE POSITION
+                    # =================================================
+
+                    middle_x = int(
+                        middle.x * camera_width
+                    )
+
+                    middle_y = int(
+                        middle.y * camera_height
+                    )
+
+                    # =================================================
+                    # LEFT CLICK DISTANCE
+                    # =================================================
+
+                    left_distance = (
+                        (thumb_x - index_x) ** 2
+                        +
+                        (thumb_y - index_y) ** 2
+                    ) ** 0.5
+
+                    # =================================================
+                    # RIGHT CLICK DISTANCE
+                    # =================================================
+
+                    right_distance = (
+                        (index_x - middle_x) ** 2
+                        +
+                        (index_y - middle_y) ** 2
+                    ) ** 0.5
+
+                    # =================================================
+                    # FINGER EXTENSION
+                    # =================================================
+
+                    index_extended = (
+                        index.y < index_mcp.y
+                    )
+
+                    middle_extended = (
+                        middle.y < middle_mcp.y
+                    )
+
+                    # =================================================
+                    # SCROLL GESTURE
+                    # =================================================
+
+                    scroll_gesture = (
+                        index_extended
+                        and middle_extended
+                        and right_distance
+                        > RIGHT_CLICK_THRESHOLD
+                        and not left_pinch_active
+                        and not dragging
+                    )
+
+                    # =================================================
+                    # SCROLL
+                    # =================================================
+
+                    if scroll_gesture:
+
+                        scrolling = True
+
+                        if previous_scroll_y is None:
+
+                            previous_scroll_y = (
+                                index_y
+                                + middle_y
+                            ) / 2
+
+                        current_scroll_y = (
+                            index_y
+                            + middle_y
+                        ) / 2
+
+                        scroll_difference = (
+                            current_scroll_y
+                            - previous_scroll_y
                         )
 
-                    elif left_pinch_active:
-
-                        pinch_duration = 0
-
-                        if pinch_start_time is not None:
-
-                            pinch_duration = (
-                                current_time
-                                - pinch_start_time
-                            )
-
-                        # -------------------------------------------------
-                        # SHORT PINCH = CLICK
-                        # -------------------------------------------------
-
-                        if pinch_duration < DRAG_HOLD_TIME:
-
-                            # -------------------------------------------------
-                            # DOUBLE CLICK
-                            # -------------------------------------------------
-
-                            if (
-                                current_time
-                                - last_left_click_time
-                                <= DOUBLE_CLICK_TIME
-                            ):
-
-                                pyautogui.doubleClick()
-
-                                print("DOUBLE CLICK")
-
-                                cv2.putText(
-                                    frame,
-                                    "DOUBLE CLICK",
-                                    (20, 120),
-                                    cv2.FONT_HERSHEY_SIMPLEX,
-                                    1,
-                                    (255, 0, 255),
-                                    2
-                                )
-
-                                last_left_click_time = 0
-
-                            # -------------------------------------------------
-                            # SINGLE CLICK
-                            # -------------------------------------------------
-
-                            else:
-
-                                if (
-                                    current_time
-                                    - last_click_time
-                                    > CLICK_COOLDOWN
-                                ):
-
-                                    pyautogui.click()
-
-                                    print("LEFT CLICK")
-
-                                    last_click_time = current_time
-
-                                    last_left_click_time = (
-                                        current_time
-                                    )
-
-                                    cv2.putText(
-                                        frame,
-                                        "LEFT CLICK",
-                                        (20, 120),
-                                        cv2.FONT_HERSHEY_SIMPLEX,
-                                        1,
-                                        (0, 255, 0),
-                                        2
-                                    )
-
-                    left_pinch_active = False
-
-                    pinch_start_time = None
-
-                # =================================================
-                # RIGHT CLICK
-                # =================================================
-
-                if (
-                    right_distance < RIGHT_CLICK_THRESHOLD
-                    and not left_pinch_active
-                    and not dragging
-                    and not scrolling
-                ):
-
-                    if not right_pinch_active:
-
+                        # Scroll down
                         if (
-                            current_time
-                            - last_click_time
-                            > CLICK_COOLDOWN
+                            scroll_difference
+                            > SCROLL_THRESHOLD
                         ):
 
-                            pyautogui.rightClick()
-
-                            print("RIGHT CLICK")
-
-                            last_click_time = current_time
+                            pyautogui.scroll(
+                                -SCROLL_SPEED
+                            )
 
                             cv2.putText(
                                 frame,
-                                "RIGHT CLICK",
+                                "SCROLL DOWN",
                                 (20, 120),
                                 cv2.FONT_HERSHEY_SIMPLEX,
                                 1,
+                                (0, 165, 255),
+                                2
+                            )
+
+                        # Scroll up
+                        elif (
+                            scroll_difference
+                            < -SCROLL_THRESHOLD
+                        ):
+
+                            pyautogui.scroll(
+                                SCROLL_SPEED
+                            )
+
+                            cv2.putText(
+                                frame,
+                                "SCROLL UP",
+                                (20, 120),
+                                cv2.FONT_HERSHEY_SIMPLEX,
+                                1,
+                                (0, 165, 255),
+                                2
+                            )
+
+                        else:
+
+                            cv2.putText(
+                                frame,
+                                "SCROLL MODE",
+                                (20, 120),
+                                cv2.FONT_HERSHEY_SIMPLEX,
+                                0.8,
+                                (0, 165, 255),
+                                2
+                            )
+
+                        previous_scroll_y = (
+                            current_scroll_y
+                        )
+
+                    else:
+
+                        scrolling = False
+                        previous_scroll_y = None
+
+                    # =================================================
+                    # LEFT PINCH / DRAG
+                    # =================================================
+
+                    if (
+                        left_distance
+                        < LEFT_CLICK_THRESHOLD
+                        and not scrolling
+                    ):
+
+                        # -------------------------------------------------
+                        # PINCH START
+                        # -------------------------------------------------
+
+                        if not left_pinch_active:
+
+                            left_pinch_active = True
+
+                            pinch_start_time = (
+                                current_time
+                            )
+
+                        # -------------------------------------------------
+                        # START DRAG
+                        # -------------------------------------------------
+
+                        if (
+                            pinch_start_time is not None
+                            and not dragging
+                            and
+                            current_time
+                            - pinch_start_time
+                            >= DRAG_HOLD_TIME
+                        ):
+
+                            pyautogui.mouseDown()
+
+                            dragging = True
+
+                            print(
+                                "DRAG STARTED"
+                            )
+
+                        # -------------------------------------------------
+                        # DRAGGING
+                        # -------------------------------------------------
+
+                        if dragging:
+
+                            cv2.putText(
+                                frame,
+                                "DRAGGING",
+                                (20, 120),
+                                cv2.FONT_HERSHEY_SIMPLEX,
+                                1,
+                                (255, 0, 0),
+                                2
+                            )
+
+                        else:
+
+                            cv2.putText(
+                                frame,
+                                "PINCH",
+                                (20, 120),
+                                cv2.FONT_HERSHEY_SIMPLEX,
+                                0.8,
                                 (0, 255, 255),
                                 2
                             )
 
-                        right_pinch_active = True
+                    # =================================================
+                    # PINCH RELEASE
+                    # =================================================
 
-                else:
+                    else:
 
-                    right_pinch_active = False
+                        # -------------------------------------------------
+                        # END DRAG
+                        # -------------------------------------------------
 
-                # =================================================
-                # STATUS
-                # =================================================
+                        if dragging:
 
-                cv2.putText(
-                    frame,
-                    "HAND DETECTED",
-                    (20, 40),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.8,
-                    (0, 255, 0),
-                    2
-                )
+                            pyautogui.mouseUp()
 
-                cv2.putText(
-                    frame,
-                    "INDEX = CURSOR",
-                    (20, 70),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.6,
-                    (255, 255, 255),
-                    1
-                )
+                            dragging = False
 
-                cv2.putText(
-                    frame,
-                    "PINCH = CLICK / HOLD = DRAG",
-                    (20, 95),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.6,
-                    (255, 255, 255),
-                    1
-                )
+                            pinch_start_time = None
+
+                            print(
+                                "DRAG ENDED"
+                            )
+
+                            cv2.putText(
+                                frame,
+                                "DROP",
+                                (20, 120),
+                                cv2.FONT_HERSHEY_SIMPLEX,
+                                1,
+                                (255, 0, 0),
+                                2
+                            )
+
+                        # -------------------------------------------------
+                        # CLICK
+                        # -------------------------------------------------
+
+                        elif left_pinch_active:
+
+                            pinch_duration = 0
+
+                            if pinch_start_time is not None:
+
+                                pinch_duration = (
+                                    current_time
+                                    - pinch_start_time
+                                )
+
+                            # Short pinch = click
+                            if (
+                                pinch_duration
+                                < DRAG_HOLD_TIME
+                            ):
+
+                                # =========================================
+                                # DOUBLE CLICK
+                                # =========================================
+
+                                if (
+                                    current_time
+                                    - last_left_click_time
+                                    <= DOUBLE_CLICK_TIME
+                                ):
+
+                                    pyautogui.doubleClick()
+
+                                    print(
+                                        "DOUBLE CLICK"
+                                    )
+
+                                    cv2.putText(
+                                        frame,
+                                        "DOUBLE CLICK",
+                                        (20, 120),
+                                        cv2.FONT_HERSHEY_SIMPLEX,
+                                        1,
+                                        (255, 0, 255),
+                                        2
+                                    )
+
+                                    last_left_click_time = 0
+
+                                # =========================================
+                                # SINGLE CLICK
+                                # =========================================
+
+                                else:
+
+                                    if (
+                                        current_time
+                                        - last_click_time
+                                        > CLICK_COOLDOWN
+                                    ):
+
+                                        pyautogui.click()
+
+                                        print(
+                                            "LEFT CLICK"
+                                        )
+
+                                        last_click_time = (
+                                            current_time
+                                        )
+
+                                        last_left_click_time = (
+                                            current_time
+                                        )
+
+                                        cv2.putText(
+                                            frame,
+                                            "LEFT CLICK",
+                                            (20, 120),
+                                            cv2.FONT_HERSHEY_SIMPLEX,
+                                            1,
+                                            (0, 255, 0),
+                                            2
+                                        )
+
+                        left_pinch_active = False
+
+                        pinch_start_time = None
+
+                    # =================================================
+                    # RIGHT CLICK
+                    # =================================================
+
+                    if (
+                        right_distance
+                        < RIGHT_CLICK_THRESHOLD
+                        and not left_pinch_active
+                        and not dragging
+                        and not scrolling
+                    ):
+
+                        if not right_pinch_active:
+
+                            if (
+                                current_time
+                                - last_click_time
+                                > CLICK_COOLDOWN
+                            ):
+
+                                pyautogui.rightClick()
+
+                                print(
+                                    "RIGHT CLICK"
+                                )
+
+                                last_click_time = (
+                                    current_time
+                                )
+
+                                cv2.putText(
+                                    frame,
+                                    "RIGHT CLICK",
+                                    (20, 120),
+                                    cv2.FONT_HERSHEY_SIMPLEX,
+                                    1,
+                                    (0, 255, 255),
+                                    2
+                                )
+
+                            right_pinch_active = True
+
+                    else:
+
+                        right_pinch_active = False
+
+                    # =================================================
+                    # ACTIVE STATUS
+                    # =================================================
+
+                    cv2.putText(
+                        frame,
+                        "ACTIVE",
+                        (20, 40),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.8,
+                        (0, 255, 0),
+                        2
+                    )
+
+                    cv2.putText(
+                        frame,
+                        "INDEX = CURSOR",
+                        (20, 70),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.6,
+                        (255, 255, 255),
+                        1
+                    )
+
+                    cv2.putText(
+                        frame,
+                        "PINCH = CLICK / HOLD = DRAG",
+                        (20, 95),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.6,
+                        (255, 255, 255),
+                        1
+                    )
 
             # =================================================
             # NO HAND DETECTED
@@ -696,7 +897,10 @@ def main():
 
                 if dragging:
 
-                    pyautogui.mouseUp()
+                    try:
+                        pyautogui.mouseUp()
+                    except:
+                        pass
 
                     dragging = False
 
@@ -704,12 +908,16 @@ def main():
                         "DRAG CANCELLED - HAND LOST"
                     )
 
-                # Reset everything
+                # Reset gestures
                 left_pinch_active = False
                 right_pinch_active = False
                 pinch_start_time = None
+
                 previous_scroll_y = None
                 scrolling = False
+
+                fist_start_time = None
+                pause_gesture_active = False
 
             # =================================================
             # DISPLAY CAMERA
@@ -721,11 +929,12 @@ def main():
             )
 
             # =================================================
-            # ESC
+            # KEYBOARD
             # =================================================
 
             key = cv2.waitKey(1) & 0xFF
 
+            # ESC = Exit
             if key == 27:
 
                 print()
@@ -757,7 +966,7 @@ def main():
 
     finally:
 
-        # Safety release
+        # Always release mouse if dragging
         if dragging:
 
             try:
@@ -765,15 +974,25 @@ def main():
             except:
                 pass
 
-        print("Stopping virtual mouse...")
+        print(
+            "Stopping virtual mouse..."
+        )
 
-        hand_tracker.close()
+        try:
+            hand_tracker.close()
+        except:
+            pass
 
-        camera.release()
+        try:
+            camera.release()
+        except:
+            pass
 
         cv2.destroyAllWindows()
 
-        print("Resources released successfully.")
+        print(
+            "Resources released successfully."
+        )
 
 
 # =========================================================
@@ -781,4 +1000,5 @@ def main():
 # =========================================================
 
 if __name__ == "__main__":
+
     main()
