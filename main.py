@@ -21,14 +21,18 @@ SMOOTHING = 0.25
 LEFT_CLICK_THRESHOLD = 35
 RIGHT_CLICK_THRESHOLD = 35
 
-# Prevent repeated clicks
+# Click protection
 CLICK_COOLDOWN = 0.5
 
-# Double click detection
+# Double click
 DOUBLE_CLICK_TIME = 0.45
 
-# Time required to start dragging
+# Drag
 DRAG_HOLD_TIME = 0.7
+
+# Scroll
+SCROLL_THRESHOLD = 12
+SCROLL_SPEED = 2
 
 
 # =========================================================
@@ -50,7 +54,6 @@ def main():
     camera = cv2.VideoCapture(CAMERA_INDEX)
 
     if not camera.isOpened():
-
         print("ERROR: Could not open camera.")
         return
 
@@ -111,11 +114,17 @@ def main():
     # =====================================================
 
     pinch_start_time = None
-
     dragging = False
 
     # =====================================================
-    # START MESSAGE
+    # SCROLL VARIABLES
+    # =====================================================
+
+    previous_scroll_y = None
+    scrolling = False
+
+    # =====================================================
+    # START
     # =====================================================
 
     print()
@@ -123,13 +132,14 @@ def main():
     print()
 
     print("CONTROLS:")
-    print("Move INDEX finger          -> Move cursor")
-    print("Quick Thumb + INDEX       -> LEFT CLICK")
-    print("Quick pinch twice          -> DOUBLE CLICK")
-    print("Hold Thumb + INDEX        -> DRAG")
-    print("Release Thumb + INDEX     -> DROP")
-    print("INDEX + MIDDLE             -> RIGHT CLICK")
-    print("Press ESC                  -> Exit")
+    print("Move INDEX finger              -> Move cursor")
+    print("Quick Thumb + INDEX            -> LEFT CLICK")
+    print("Quick pinch twice              -> DOUBLE CLICK")
+    print("Hold Thumb + INDEX             -> DRAG")
+    print("Release Thumb + INDEX          -> DROP")
+    print("INDEX + MIDDLE pinch            -> RIGHT CLICK")
+    print("INDEX + MIDDLE extended        -> SCROLL")
+    print("Press ESC                      -> Exit")
     print()
 
     # =====================================================
@@ -179,6 +189,10 @@ def main():
                 index = landmarks[8]
                 middle = landmarks[12]
 
+                # Extra landmarks for finger-state detection
+                index_mcp = landmarks[5]
+                middle_mcp = landmarks[9]
+
                 camera_height, camera_width, _ = frame.shape
 
                 # =================================================
@@ -193,9 +207,9 @@ def main():
                     index.y * camera_height
                 )
 
-                # -------------------------------------------------
+                # =================================================
                 # SCREEN POSITION
-                # -------------------------------------------------
+                # =================================================
 
                 target_x = int(
                     index.x * screen_width
@@ -238,7 +252,7 @@ def main():
                 previous_y = current_y
 
                 # -------------------------------------------------
-                # DRAW INDEX
+                # DRAW INDEX FINGERTIP
                 # -------------------------------------------------
 
                 cv2.circle(
@@ -286,7 +300,7 @@ def main():
                 )
 
                 # =================================================
-                # LEFT / DRAG DISTANCE
+                # LEFT CLICK / DRAG DISTANCE
                 # =================================================
 
                 left_distance = (
@@ -312,13 +326,120 @@ def main():
                 current_time = time.time()
 
                 # =================================================
-                # LEFT PINCH / CLICK / DOUBLE CLICK / DRAG
+                # FINGER EXTENSION DETECTION
                 # =================================================
 
-                if left_distance < LEFT_CLICK_THRESHOLD:
+                index_extended = (
+                    index.y < index_mcp.y
+                )
+
+                middle_extended = (
+                    middle.y < middle_mcp.y
+                )
+
+                # =================================================
+                # SCROLL MODE
+                # =================================================
+
+                scroll_gesture = (
+                    index_extended
+                    and middle_extended
+                    and right_distance > RIGHT_CLICK_THRESHOLD
+                    and not left_pinch_active
+                    and not dragging
+                )
+
+                if scroll_gesture:
+
+                    scrolling = True
+
+                    # Start tracking scroll position
+                    if previous_scroll_y is None:
+
+                        previous_scroll_y = (
+                            index_y + middle_y
+                        ) / 2
+
+                    current_scroll_y = (
+                        index_y + middle_y
+                    ) / 2
+
+                    scroll_difference = (
+                        current_scroll_y
+                        - previous_scroll_y
+                    )
 
                     # -------------------------------------------------
-                    # PINCH JUST STARTED
+                    # SCROLL DOWN
+                    # -------------------------------------------------
+
+                    if scroll_difference > SCROLL_THRESHOLD:
+
+                        pyautogui.scroll(
+                            -SCROLL_SPEED
+                        )
+
+                        cv2.putText(
+                            frame,
+                            "SCROLL DOWN",
+                            (20, 120),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            1,
+                            (0, 165, 255),
+                            2
+                        )
+
+                    # -------------------------------------------------
+                    # SCROLL UP
+                    # -------------------------------------------------
+
+                    elif scroll_difference < -SCROLL_THRESHOLD:
+
+                        pyautogui.scroll(
+                            SCROLL_SPEED
+                        )
+
+                        cv2.putText(
+                            frame,
+                            "SCROLL UP",
+                            (20, 120),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            1,
+                            (0, 165, 255),
+                            2
+                        )
+
+                    else:
+
+                        cv2.putText(
+                            frame,
+                            "SCROLL MODE",
+                            (20, 120),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.8,
+                            (0, 165, 255),
+                            2
+                        )
+
+                    previous_scroll_y = current_scroll_y
+
+                else:
+
+                    # Reset scroll tracking
+                    scrolling = False
+                    previous_scroll_y = None
+
+                # =================================================
+                # LEFT PINCH / DRAG
+                # =================================================
+
+                if (
+                    left_distance < LEFT_CLICK_THRESHOLD
+                    and not scrolling
+                ):
+
+                    # -------------------------------------------------
+                    # PINCH START
                     # -------------------------------------------------
 
                     if not left_pinch_active:
@@ -328,7 +449,7 @@ def main():
                         pinch_start_time = current_time
 
                     # -------------------------------------------------
-                    # CHECK DRAG
+                    # START DRAG
                     # -------------------------------------------------
 
                     if (
@@ -374,14 +495,10 @@ def main():
                         )
 
                 # =================================================
-                # PINCH RELEASED
+                # LEFT PINCH RELEASE
                 # =================================================
 
                 else:
-
-                    # -------------------------------------------------
-                    # RELEASE DRAG
-                    # -------------------------------------------------
 
                     if dragging:
 
@@ -403,10 +520,6 @@ def main():
                             2
                         )
 
-                    # -------------------------------------------------
-                    # NORMAL CLICK
-                    # -------------------------------------------------
-
                     elif left_pinch_active:
 
                         pinch_duration = 0
@@ -418,7 +531,10 @@ def main():
                                 - pinch_start_time
                             )
 
-                        # Only treat a short pinch as a click
+                        # -------------------------------------------------
+                        # SHORT PINCH = CLICK
+                        # -------------------------------------------------
+
                         if pinch_duration < DRAG_HOLD_TIME:
 
                             # -------------------------------------------------
@@ -479,10 +595,6 @@ def main():
                                         2
                                     )
 
-                    # -------------------------------------------------
-                    # RESET PINCH
-                    # -------------------------------------------------
-
                     left_pinch_active = False
 
                     pinch_start_time = None
@@ -495,6 +607,7 @@ def main():
                     right_distance < RIGHT_CLICK_THRESHOLD
                     and not left_pinch_active
                     and not dragging
+                    and not scrolling
                 ):
 
                     if not right_pinch_active:
@@ -528,7 +641,7 @@ def main():
                     right_pinch_active = False
 
                 # =================================================
-                # STATUS TEXT
+                # STATUS
                 # =================================================
 
                 cv2.putText(
@@ -578,7 +691,7 @@ def main():
                 )
 
                 # -------------------------------------------------
-                # SAFETY: RELEASE MOUSE IF HAND DISAPPEARS
+                # SAFETY: RELEASE DRAG
                 # -------------------------------------------------
 
                 if dragging:
@@ -591,13 +704,15 @@ def main():
                         "DRAG CANCELLED - HAND LOST"
                     )
 
-                # Reset gesture states
+                # Reset everything
                 left_pinch_active = False
                 right_pinch_active = False
                 pinch_start_time = None
+                previous_scroll_y = None
+                scrolling = False
 
             # =================================================
-            # DISPLAY
+            # DISPLAY CAMERA
             # =================================================
 
             cv2.imshow(
