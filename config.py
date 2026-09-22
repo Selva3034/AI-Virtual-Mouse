@@ -76,3 +76,20 @@ PAUSE_HOLD_TIME = 1.0
 # =========================================================
 
 WINDOW_NAME = "AI Virtual Mouse"
+
+# =========================================================
+# GESTURE STABILITY SETTINGS
+# =========================================================
+
+# Number of consecutive frames required
+# before confirming a gesture
+GESTURE_CONFIRM_FRAMES = 3
+
+# Minimum time between gesture actions
+GESTURE_ACTION_COOLDOWN = 0.35
+
+# Prevent accidental click immediately after scrolling
+SCROLL_CLICK_BLOCK_TIME = 0.50
+
+# Prevent accidental right click immediately after left click
+RIGHT_CLICK_BLOCK_TIME = 0.40
