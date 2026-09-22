@@ -36,16 +36,32 @@ WINDOW_NAME = config.WINDOW_NAME
 
 
 # =========================================================
-# PHASE 2 - GESTURE STABILITY SETTINGS
+# GESTURE STABILITY SETTINGS
 # =========================================================
 
-GESTURE_CONFIRM_FRAMES = config.GESTURE_CONFIRM_FRAMES
+GESTURE_CONFIRM_FRAMES = getattr(
+    config,
+    "GESTURE_CONFIRM_FRAMES",
+    3
+)
 
-GESTURE_ACTION_COOLDOWN = config.GESTURE_ACTION_COOLDOWN
+GESTURE_ACTION_COOLDOWN = getattr(
+    config,
+    "GESTURE_ACTION_COOLDOWN",
+    0.35
+)
 
-SCROLL_CLICK_BLOCK_TIME = config.SCROLL_CLICK_BLOCK_TIME
+SCROLL_CLICK_BLOCK_TIME = getattr(
+    config,
+    "SCROLL_CLICK_BLOCK_TIME",
+    0.5
+)
 
-RIGHT_CLICK_BLOCK_TIME = config.RIGHT_CLICK_BLOCK_TIME
+RIGHT_CLICK_BLOCK_TIME = getattr(
+    config,
+    "RIGHT_CLICK_BLOCK_TIME",
+    0.5
+)
 
 
 # =========================================================
@@ -80,7 +96,9 @@ def confirm_gesture(
 def main():
 
     print("=" * 55)
+
     print("AI VIRTUAL MOUSE")
+
     print("=" * 55)
 
     print("Starting camera...")
@@ -96,7 +114,18 @@ def main():
 
     if not camera.isOpened():
 
-        print("ERROR: Could not open camera.")
+        print(
+            "ERROR: Could not open camera."
+        )
+
+        control.write_status(
+            camera="ERROR",
+            hand="READY",
+            cursor="READY",
+            gesture="None",
+            fps=0,
+            paused=False
+        )
 
         return
 
@@ -110,7 +139,9 @@ def main():
         FRAME_HEIGHT
     )
 
-    print("Camera started successfully.")
+    print(
+        "Camera started successfully."
+    )
 
     # =====================================================
     # HAND TRACKER
@@ -122,7 +153,9 @@ def main():
         tracking_confidence=config.TRACKING_CONFIDENCE
     )
 
-    print("MediaPipe hand tracking started.")
+    print(
+        "MediaPipe hand tracking started."
+    )
 
     # =====================================================
     # SCREEN
@@ -147,9 +180,11 @@ def main():
     # =====================================================
 
     last_click_time = 0
+
     last_left_click_time = 0
 
     left_pinch_active = False
+
     right_pinch_active = False
 
     # =====================================================
@@ -157,6 +192,7 @@ def main():
     # =====================================================
 
     pinch_start_time = None
+
     dragging = False
 
     # =====================================================
@@ -164,6 +200,7 @@ def main():
     # =====================================================
 
     previous_scroll_y = None
+
     scrolling = False
 
     # =====================================================
@@ -173,6 +210,7 @@ def main():
     paused = False
 
     fist_start_time = None
+
     pause_gesture_active = False
 
     # =====================================================
@@ -198,39 +236,88 @@ def main():
     last_right_click_action_time = 0
 
     # =====================================================
+    # FPS
+    # =====================================================
+
+    fps_start_time = time.time()
+
+    fps_frame_count = 0
+
+    current_fps = 0
+
+    # =====================================================
+    # CURRENT GESTURE
+    # =====================================================
+
+    current_gesture = "None"
+
+    # =====================================================
+    # START STATUS
+    # =====================================================
+
+    control.write_status(
+        camera="ACTIVE",
+        hand="READY",
+        cursor="ACTIVE",
+        gesture="None",
+        fps=0,
+        paused=False
+    )
+
+    # =====================================================
     # START MESSAGE
     # =====================================================
 
     print()
 
-    print("AI Virtual Mouse started.")
+    print(
+        "AI Virtual Mouse started."
+    )
 
     print()
 
     print("CONTROLS:")
 
-    print("Move INDEX finger          -> Move cursor")
+    print(
+        "Move INDEX finger          -> Move cursor"
+    )
 
-    print("Quick Thumb + INDEX        -> LEFT CLICK")
+    print(
+        "Quick Thumb + INDEX        -> LEFT CLICK"
+    )
 
-    print("Quick pinch twice          -> DOUBLE CLICK")
+    print(
+        "Quick pinch twice          -> DOUBLE CLICK"
+    )
 
-    print("Hold Thumb + INDEX         -> DRAG")
+    print(
+        "Hold Thumb + INDEX         -> DRAG"
+    )
 
-    print("Release Thumb + INDEX      -> DROP")
+    print(
+        "Release Thumb + INDEX      -> DROP"
+    )
 
-    print("INDEX + MIDDLE pinch       -> RIGHT CLICK")
+    print(
+        "INDEX + MIDDLE pinch       -> RIGHT CLICK"
+    )
 
-    print("Two fingers extended       -> SCROLL")
+    print(
+        "Two fingers extended       -> SCROLL"
+    )
 
-    print("Closed fist for 1 sec      -> PAUSE / RESUME")
+    print(
+        "Closed fist for 1 sec      -> PAUSE / RESUME"
+    )
 
-    print("Press ESC                  -> Exit")
+    print(
+        "Press ESC                  -> Exit"
+    )
 
     print()
 
     # =====================================================
-    # WINDOW
+    # CAMERA WINDOW
     # =====================================================
 
     cv2.namedWindow(
@@ -253,13 +340,35 @@ def main():
         while True:
 
             # =================================================
+            # FPS
+            # =================================================
+
+            fps_frame_count += 1
+
+            fps_elapsed = (
+                time.time()
+                - fps_start_time
+            )
+
+            if fps_elapsed >= 1.0:
+
+                current_fps = (
+                    fps_frame_count
+                    / fps_elapsed
+                )
+
+                fps_frame_count = 0
+
+                fps_start_time = time.time()
+
+            # =================================================
             # UI CONTROL COMMAND
             # =================================================
 
             command = control.read_command()
 
             # =================================================
-            # UI PAUSE COMMAND
+            # UI PAUSE
             # =================================================
 
             if command == "pause":
@@ -272,7 +381,6 @@ def main():
                         "UI: VIRTUAL MOUSE PAUSED"
                     )
 
-                    # Safety release
                     if dragging:
 
                         try:
@@ -285,7 +393,6 @@ def main():
 
                         dragging = False
 
-                    # Reset gestures
                     left_pinch_active = False
 
                     right_pinch_active = False
@@ -296,16 +403,22 @@ def main():
 
                     scrolling = False
 
-                    gesture_counts["left_click"] = 0
+                    gesture_counts[
+                        "left_click"
+                    ] = 0
 
-                    gesture_counts["right_click"] = 0
+                    gesture_counts[
+                        "right_click"
+                    ] = 0
 
-                    gesture_counts["scroll"] = 0
+                    gesture_counts[
+                        "scroll"
+                    ] = 0
 
                 control.clear_command()
 
             # =================================================
-            # UI RESUME COMMAND
+            # UI RESUME
             # =================================================
 
             elif command == "resume":
@@ -318,7 +431,6 @@ def main():
                         "UI: VIRTUAL MOUSE RESUMED"
                     )
 
-                    # Reset gestures
                     left_pinch_active = False
 
                     right_pinch_active = False
@@ -329,11 +441,17 @@ def main():
 
                     scrolling = False
 
-                    gesture_counts["left_click"] = 0
+                    gesture_counts[
+                        "left_click"
+                    ] = 0
 
-                    gesture_counts["right_click"] = 0
+                    gesture_counts[
+                        "right_click"
+                    ] = 0
 
-                    gesture_counts["scroll"] = 0
+                    gesture_counts[
+                        "scroll"
+                    ] = 0
 
                 control.clear_command()
 
@@ -347,6 +465,15 @@ def main():
 
                 print(
                     "Unable to read camera frame."
+                )
+
+                control.write_status(
+                    camera="ERROR",
+                    hand="NOT DETECTED",
+                    cursor="PAUSED" if paused else "ACTIVE",
+                    gesture="Camera Error",
+                    fps=current_fps,
+                    paused=paused
                 )
 
                 continue
@@ -378,6 +505,30 @@ def main():
             )
 
             # =================================================
+            # DEFAULT STATUS
+            # =================================================
+
+            if landmarks:
+
+                hand_status = "DETECTED"
+
+            else:
+
+                hand_status = "NOT DETECTED"
+
+            # =================================================
+            # DEFAULT GESTURE
+            # =================================================
+
+            if landmarks:
+
+                current_gesture = "MOVE CURSOR"
+
+            else:
+
+                current_gesture = "None"
+
+            # =================================================
             # HAND DETECTED
             # =================================================
 
@@ -405,26 +556,32 @@ def main():
 
                 pinky_mcp = landmarks[17]
 
-                camera_height, camera_width, _ = frame.shape
+                camera_height, camera_width, _ = (
+                    frame.shape
+                )
 
                 # =================================================
                 # FINGER STATES
                 # =================================================
 
                 index_folded = (
-                    index.y > index_mcp.y
+                    index.y
+                    > index_mcp.y
                 )
 
                 middle_folded = (
-                    middle.y > middle_mcp.y
+                    middle.y
+                    > middle_mcp.y
                 )
 
                 ring_folded = (
-                    ring.y > ring_mcp.y
+                    ring.y
+                    > ring_mcp.y
                 )
 
                 pinky_folded = (
-                    pinky.y > pinky_mcp.y
+                    pinky.y
+                    > pinky_mcp.y
                 )
 
                 # =================================================
@@ -434,8 +591,11 @@ def main():
                 fist_detected = (
 
                     index_folded
+
                     and middle_folded
+
                     and ring_folded
+
                     and pinky_folded
 
                 )
@@ -451,6 +611,8 @@ def main():
                 # =================================================
 
                 if fist_detected:
+
+                    current_gesture = "CLOSED FIST"
 
                     if fist_start_time is None:
 
@@ -471,7 +633,6 @@ def main():
 
                         pause_gesture_active = True
 
-                        # Safety release
                         if paused and dragging:
 
                             try:
@@ -484,7 +645,6 @@ def main():
 
                             dragging = False
 
-                        # Reset gestures
                         left_pinch_active = False
 
                         right_pinch_active = False
@@ -495,11 +655,17 @@ def main():
 
                         scrolling = False
 
-                        gesture_counts["left_click"] = 0
+                        gesture_counts[
+                            "left_click"
+                        ] = 0
 
-                        gesture_counts["right_click"] = 0
+                        gesture_counts[
+                            "right_click"
+                        ] = 0
 
-                        gesture_counts["scroll"] = 0
+                        gesture_counts[
+                            "scroll"
+                        ] = 0
 
                         if paused:
 
@@ -524,6 +690,8 @@ def main():
                 # =================================================
 
                 if paused:
+
+                    current_gesture = "PAUSED"
 
                     overlay = frame.copy()
 
@@ -561,9 +729,9 @@ def main():
 
                     cv2.putText(
                         frame,
-                        "Hold CLOSED FIST to resume",
+                        "Use UI or hold CLOSED FIST to resume",
                         (
-                            camera_width // 2 - 220,
+                            camera_width // 2 - 260,
                             145
                         ),
                         cv2.FONT_HERSHEY_SIMPLEX,
@@ -583,11 +751,13 @@ def main():
                     # =================================================
 
                     index_x = int(
-                        index.x * camera_width
+                        index.x
+                        * camera_width
                     )
 
                     index_y = int(
-                        index.y * camera_height
+                        index.y
+                        * camera_height
                     )
 
                     # =================================================
@@ -595,31 +765,45 @@ def main():
                     # =================================================
 
                     target_x = int(
-                        index.x * screen_width
+                        index.x
+                        * screen_width
                     )
 
                     target_y = int(
-                        index.y * screen_height
+                        index.y
+                        * screen_height
                     )
 
                     # =================================================
-                    # CURSOR SMOOTHING
+                    # SMOOTH CURSOR
                     # =================================================
 
                     current_x = (
+
                         previous_x
-                        + (
+
+                        +
+
+                        (
                             target_x
                             - previous_x
-                        ) * SMOOTHING
+                        )
+                        * SMOOTHING
+
                     )
 
                     current_y = (
+
                         previous_y
-                        + (
+
+                        +
+
+                        (
                             target_y
                             - previous_y
-                        ) * SMOOTHING
+                        )
+                        * SMOOTHING
+
                     )
 
                     current_x = int(
@@ -664,11 +848,13 @@ def main():
                     # =================================================
 
                     thumb_x = int(
-                        thumb.x * camera_width
+                        thumb.x
+                        * camera_width
                     )
 
                     thumb_y = int(
-                        thumb.y * camera_height
+                        thumb.y
+                        * camera_height
                     )
 
                     # =================================================
@@ -676,11 +862,13 @@ def main():
                     # =================================================
 
                     middle_x = int(
-                        middle.x * camera_width
+                        middle.x
+                        * camera_width
                     )
 
                     middle_y = int(
-                        middle.y * camera_height
+                        middle.y
+                        * camera_height
                     )
 
                     # =================================================
@@ -724,7 +912,7 @@ def main():
                     ) ** 0.5
 
                     # =================================================
-                    # FINGER EXTENSION
+                    # EXTENSION
                     # =================================================
 
                     index_extended = (
@@ -738,7 +926,7 @@ def main():
                     )
 
                     # =================================================
-                    # SCROLL DETECTION
+                    # SCROLL
                     # =================================================
 
                     scroll_detected = (
@@ -756,61 +944,53 @@ def main():
 
                     )
 
-                    scroll_confirmed = confirm_gesture(
-
-                        "scroll",
-
-                        scroll_detected,
-
-                        gesture_counts,
-
-                        GESTURE_CONFIRM_FRAMES
-
+                    scroll_confirmed = (
+                        confirm_gesture(
+                            "scroll",
+                            scroll_detected,
+                            gesture_counts,
+                            GESTURE_CONFIRM_FRAMES
+                        )
                     )
-
-                    # =================================================
-                    # SCROLL
-                    # =================================================
 
                     if scroll_confirmed:
 
                         scrolling = True
 
-                        gesture_counts["left_click"] = 0
+                        gesture_counts[
+                            "left_click"
+                        ] = 0
 
-                        gesture_counts["right_click"] = 0
+                        gesture_counts[
+                            "right_click"
+                        ] = 0
 
                         if previous_scroll_y is None:
 
                             previous_scroll_y = (
-
                                 index_y
                                 + middle_y
-
                             ) / 2
 
                         current_scroll_y = (
-
                             index_y
                             + middle_y
-
                         ) / 2
 
                         scroll_difference = (
-
                             current_scroll_y
                             - previous_scroll_y
-
                         )
 
-                        # ---------------------------------------------
-                        # SCROLL DOWN
-                        # ---------------------------------------------
-
+                        # Scroll down
                         if (
                             scroll_difference
                             > SCROLL_THRESHOLD
                         ):
+
+                            current_gesture = (
+                                "SCROLL DOWN"
+                            )
 
                             if (
                                 current_time
@@ -840,14 +1020,15 @@ def main():
                                 2
                             )
 
-                        # ---------------------------------------------
-                        # SCROLL UP
-                        # ---------------------------------------------
-
+                        # Scroll up
                         elif (
                             scroll_difference
                             < -SCROLL_THRESHOLD
                         ):
+
+                            current_gesture = (
+                                "SCROLL UP"
+                            )
 
                             if (
                                 current_time
@@ -878,6 +1059,10 @@ def main():
                             )
 
                         else:
+
+                            current_gesture = (
+                                "SCROLL MODE"
+                            )
 
                             cv2.putText(
                                 frame,
@@ -912,25 +1097,20 @@ def main():
 
                     )
 
-                    left_pinch_confirmed = confirm_gesture(
-
-                        "left_click",
-
-                        left_pinch_detected,
-
-                        gesture_counts,
-
-                        GESTURE_CONFIRM_FRAMES
-
+                    left_pinch_confirmed = (
+                        confirm_gesture(
+                            "left_click",
+                            left_pinch_detected,
+                            gesture_counts,
+                            GESTURE_CONFIRM_FRAMES
+                        )
                     )
-
-                    # =================================================
-                    # LEFT PINCH / DRAG
-                    # =================================================
 
                     if left_pinch_confirmed:
 
-                        gesture_counts["right_click"] = 0
+                        gesture_counts[
+                            "right_click"
+                        ] = 0
 
                         if not left_pinch_active:
 
@@ -940,13 +1120,16 @@ def main():
                                 current_time
                             )
 
-                        # ---------------------------------------------
-                        # START DRAG
-                        # ---------------------------------------------
+                        # =================================================
+                        # DRAG START
+                        # =================================================
 
                         if (
-                            pinch_start_time is not None
+                            pinch_start_time
+                            is not None
+
                             and not dragging
+
                             and (
                                 current_time
                                 - pinch_start_time
@@ -958,15 +1141,23 @@ def main():
 
                             dragging = True
 
+                            current_gesture = (
+                                "DRAGGING"
+                            )
+
                             print(
                                 "DRAG STARTED"
                             )
 
-                        # ---------------------------------------------
+                        # =================================================
                         # DRAGGING
-                        # ---------------------------------------------
+                        # =================================================
 
                         if dragging:
+
+                            current_gesture = (
+                                "DRAGGING"
+                            )
 
                             cv2.putText(
                                 frame,
@@ -979,6 +1170,10 @@ def main():
                             )
 
                         else:
+
+                            current_gesture = (
+                                "PINCH"
+                            )
 
                             cv2.putText(
                                 frame,
@@ -996,10 +1191,6 @@ def main():
 
                     else:
 
-                        # ---------------------------------------------
-                        # END DRAG
-                        # ---------------------------------------------
-
                         if dragging:
 
                             pyautogui.mouseUp()
@@ -1007,6 +1198,10 @@ def main():
                             dragging = False
 
                             pinch_start_time = None
+
+                            current_gesture = (
+                                "DROP"
+                            )
 
                             print(
                                 "DRAG ENDED"
@@ -1021,10 +1216,6 @@ def main():
                                 (255, 0, 0),
                                 2
                             )
-
-                        # ---------------------------------------------
-                        # CLICK
-                        # ---------------------------------------------
 
                         elif left_pinch_active:
 
@@ -1042,10 +1233,6 @@ def main():
                                 < DRAG_HOLD_TIME
                             ):
 
-                                # -------------------------------------
-                                # SCROLL CLICK BLOCK
-                                # -------------------------------------
-
                                 scroll_blocked = (
 
                                     current_time
@@ -1053,10 +1240,6 @@ def main():
                                     < SCROLL_CLICK_BLOCK_TIME
 
                                 )
-
-                                # -------------------------------------
-                                # ACTION COOLDOWN
-                                # -------------------------------------
 
                                 action_allowed = (
 
@@ -1071,9 +1254,9 @@ def main():
                                     and action_allowed
                                 ):
 
-                                    # ================================
+                                    # =================================
                                     # DOUBLE CLICK
-                                    # ================================
+                                    # =================================
 
                                     if (
                                         current_time
@@ -1082,6 +1265,10 @@ def main():
                                     ):
 
                                         pyautogui.doubleClick()
+
+                                        current_gesture = (
+                                            "DOUBLE CLICK"
+                                        )
 
                                         print(
                                             "DOUBLE CLICK"
@@ -1107,9 +1294,9 @@ def main():
                                             2
                                         )
 
-                                    # ================================
+                                    # =================================
                                     # SINGLE CLICK
-                                    # ================================
+                                    # =================================
 
                                     else:
 
@@ -1120,6 +1307,10 @@ def main():
                                         ):
 
                                             pyautogui.click()
+
+                                            current_gesture = (
+                                                "LEFT CLICK"
+                                            )
 
                                             print(
                                                 "LEFT CLICK"
@@ -1151,11 +1342,13 @@ def main():
                                                 2
                                             )
 
-                        left_pinch_active = False
+                            left_pinch_active = False
 
-                        pinch_start_time = None
+                            pinch_start_time = None
 
-                        gesture_counts["left_click"] = 0
+                            gesture_counts[
+                                "left_click"
+                            ] = 0
 
                     # =================================================
                     # RIGHT CLICK
@@ -1174,21 +1367,20 @@ def main():
 
                     )
 
-                    right_click_confirmed = confirm_gesture(
-
-                        "right_click",
-
-                        right_click_detected,
-
-                        gesture_counts,
-
-                        GESTURE_CONFIRM_FRAMES
-
+                    right_click_confirmed = (
+                        confirm_gesture(
+                            "right_click",
+                            right_click_detected,
+                            gesture_counts,
+                            GESTURE_CONFIRM_FRAMES
+                        )
                     )
 
                     if right_click_confirmed:
 
-                        gesture_counts["left_click"] = 0
+                        gesture_counts[
+                            "left_click"
+                        ] = 0
 
                         if not right_pinch_active:
 
@@ -1214,6 +1406,10 @@ def main():
                             ):
 
                                 pyautogui.rightClick()
+
+                                current_gesture = (
+                                    "RIGHT CLICK"
+                                )
 
                                 print(
                                     "RIGHT CLICK"
@@ -1247,10 +1443,12 @@ def main():
 
                         right_pinch_active = False
 
-                        gesture_counts["right_click"] = 0
+                        gesture_counts[
+                            "right_click"
+                        ] = 0
 
                     # =================================================
-                    # ACTIVE STATUS
+                    # ACTIVE DISPLAY
                     # =================================================
 
                     cv2.putText(
@@ -1289,6 +1487,8 @@ def main():
 
             else:
 
+                current_gesture = "None"
+
                 cv2.putText(
                     frame,
                     "NO HAND DETECTED",
@@ -1316,7 +1516,6 @@ def main():
                         "DRAG CANCELLED - HAND LOST"
                     )
 
-                # Reset gestures
                 left_pinch_active = False
 
                 right_pinch_active = False
@@ -1331,14 +1530,41 @@ def main():
 
                 pause_gesture_active = False
 
-                gesture_counts["left_click"] = 0
+                gesture_counts[
+                    "left_click"
+                ] = 0
 
-                gesture_counts["right_click"] = 0
+                gesture_counts[
+                    "right_click"
+                ] = 0
 
-                gesture_counts["scroll"] = 0
+                gesture_counts[
+                    "scroll"
+                ] = 0
 
             # =================================================
-            # DISPLAY
+            # SEND REAL-TIME STATUS TO UI
+            # =================================================
+
+            control.write_status(
+                camera="ACTIVE",
+                hand=hand_status,
+                cursor=(
+                    "PAUSED"
+                    if paused
+                    else "ACTIVE"
+                ),
+                gesture=(
+                    "PAUSED"
+                    if paused
+                    else current_gesture
+                ),
+                fps=current_fps,
+                paused=paused
+            )
+
+            # =================================================
+            # DISPLAY CAMERA
             # =================================================
 
             cv2.imshow(
@@ -1360,7 +1586,9 @@ def main():
 
                 print()
 
-                print("ESC pressed.")
+                print(
+                    "ESC pressed."
+                )
 
                 break
 
@@ -1372,7 +1600,9 @@ def main():
 
         print()
 
-        print("Program interrupted.")
+        print(
+            "Program interrupted."
+        )
 
     # =========================================================
     # ERROR HANDLING
@@ -1382,7 +1612,9 @@ def main():
 
         print()
 
-        print("Application Error:")
+        print(
+            "Application Error:"
+        )
 
         print(error)
 
@@ -1392,8 +1624,10 @@ def main():
 
     finally:
 
-        # Clear UI command
+        # Clear runtime files
         control.clear_command()
+
+        control.clear_status()
 
         # Safety release
         if dragging:

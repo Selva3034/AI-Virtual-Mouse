@@ -40,3 +40,5 @@ Thumbs.db
 # Project generated files
 screenshots/
 control.json
+status.json
+settings.json

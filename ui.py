@@ -32,7 +32,7 @@ class VirtualMouseUI:
         self.root.resizable(True, True)
 
         # =====================================================
-        # ENGINE PROCESS
+        # ENGINE
         # =====================================================
 
         self.engine_process = None
@@ -109,7 +109,7 @@ class VirtualMouseUI:
         )
 
         # =====================================================
-        # MENU TITLE
+        # MENU
         # =====================================================
 
         navigation_title = ctk.CTkLabel(
@@ -127,10 +127,7 @@ class VirtualMouseUI:
             anchor="w"
         )
 
-        # =====================================================
-        # DASHBOARD BUTTON
-        # =====================================================
-
+        # Dashboard
         self.dashboard_button = ctk.CTkButton(
             self.sidebar,
             text="Dashboard",
@@ -146,10 +143,7 @@ class VirtualMouseUI:
             fill="x"
         )
 
-        # =====================================================
-        # GESTURES BUTTON
-        # =====================================================
-
+        # Gestures
         self.gestures_button = ctk.CTkButton(
             self.sidebar,
             text="Gesture Controls",
@@ -166,10 +160,7 @@ class VirtualMouseUI:
             fill="x"
         )
 
-        # =====================================================
-        # SETTINGS BUTTON
-        # =====================================================
-
+        # Settings
         self.settings_button = ctk.CTkButton(
             self.sidebar,
             text="Settings",
@@ -205,7 +196,7 @@ class VirtualMouseUI:
         )
 
         # =====================================================
-        # MAIN CONTENT
+        # MAIN FRAME
         # =====================================================
 
         self.main_frame = ctk.CTkFrame(
@@ -285,7 +276,7 @@ class VirtualMouseUI:
         )
 
         # =====================================================
-        # CONTENT AREA
+        # CONTENT
         # =====================================================
 
         self.content_frame = ctk.CTkFrame(
@@ -320,7 +311,7 @@ class VirtualMouseUI:
         self.create_settings_page()
 
         # =====================================================
-        # CONTROL BAR
+        # CONTROL BUTTONS
         # =====================================================
 
         self.button_frame = ctk.CTkFrame(
@@ -335,25 +326,14 @@ class VirtualMouseUI:
             pady=(15, 0)
         )
 
-        self.button_frame.grid_columnconfigure(
-            0,
-            weight=1
-        )
+        for column in range(3):
 
-        self.button_frame.grid_columnconfigure(
-            1,
-            weight=1
-        )
+            self.button_frame.grid_columnconfigure(
+                column,
+                weight=1
+            )
 
-        self.button_frame.grid_columnconfigure(
-            2,
-            weight=1
-        )
-
-        # =====================================================
-        # START BUTTON
-        # =====================================================
-
+        # START
         self.start_button = ctk.CTkButton(
             self.button_frame,
             text="START",
@@ -373,10 +353,7 @@ class VirtualMouseUI:
             padx=(0, 5)
         )
 
-        # =====================================================
-        # PAUSE BUTTON
-        # =====================================================
-
+        # PAUSE
         self.pause_button = ctk.CTkButton(
             self.button_frame,
             text="PAUSE",
@@ -397,10 +374,7 @@ class VirtualMouseUI:
             padx=5
         )
 
-        # =====================================================
-        # STOP BUTTON
-        # =====================================================
-
+        # STOP
         self.stop_button = ctk.CTkButton(
             self.button_frame,
             text="STOP",
@@ -424,18 +398,27 @@ class VirtualMouseUI:
         )
 
         # =====================================================
-        # DEFAULT PAGE
-        # =====================================================
-
-        self.show_dashboard()
-
-        # =====================================================
         # CLOSE EVENT
         # =====================================================
 
         self.root.protocol(
             "WM_DELETE_WINDOW",
             self.exit
+        )
+
+        # =====================================================
+        # DEFAULT PAGE
+        # =====================================================
+
+        self.show_dashboard()
+
+        # =====================================================
+        # START STATUS MONITOR
+        # =====================================================
+
+        self.root.after(
+            200,
+            self.update_realtime_status
         )
 
     # =========================================================
@@ -723,7 +706,7 @@ class VirtualMouseUI:
 
             ("TWO FINGERS", "Scroll Up / Down"),
 
-            ("CLOSED FIST", "Pause / Resume"),
+            ("CLOSED FIST", "Pause / Resume")
 
         ]
 
@@ -811,9 +794,9 @@ class VirtualMouseUI:
             pady=(25, 25)
         )
 
-        # -----------------------------------------------------
+        # =====================================================
         # SMOOTHING
-        # -----------------------------------------------------
+        # =====================================================
 
         smoothing_title = ctk.CTkLabel(
             self.settings_page,
@@ -845,9 +828,9 @@ class VirtualMouseUI:
             pady=(10, 20)
         )
 
-        # -----------------------------------------------------
+        # =====================================================
         # SCROLL SPEED
-        # -----------------------------------------------------
+        # =====================================================
 
         scroll_title = ctk.CTkLabel(
             self.settings_page,
@@ -879,9 +862,9 @@ class VirtualMouseUI:
             pady=(10, 20)
         )
 
-        # -----------------------------------------------------
+        # =====================================================
         # CONFIRMATION FRAMES
-        # -----------------------------------------------------
+        # =====================================================
 
         confirmation_title = ctk.CTkLabel(
             self.settings_page,
@@ -988,15 +971,15 @@ class VirtualMouseUI:
         return status_label
 
     # =========================================================
-    # START ENGINE
+    # START
     # =========================================================
 
     def start(self):
 
-        # Clear any old command
         control.clear_command()
 
-        # Already running
+        control.clear_status()
+
         if (
             self.engine_process is not None
             and self.engine_process.poll() is None
@@ -1032,7 +1015,7 @@ class VirtualMouseUI:
             self.is_paused = False
 
             # -------------------------------------------------
-            # UPDATE UI
+            # UI
             # -------------------------------------------------
 
             self.system_label.configure(
@@ -1041,21 +1024,6 @@ class VirtualMouseUI:
             )
 
             self.header_status.configure(
-                text="● ACTIVE",
-                text_color="#22C55E"
-            )
-
-            self.camera_status.configure(
-                text="● ACTIVE",
-                text_color="#22C55E"
-            )
-
-            self.hand_status.configure(
-                text="● TRACKING",
-                text_color="#22C55E"
-            )
-
-            self.cursor_status.configure(
                 text="● ACTIVE",
                 text_color="#22C55E"
             )
@@ -1097,10 +1065,6 @@ class VirtualMouseUI:
 
             return
 
-        # =====================================================
-        # PAUSE
-        # =====================================================
-
         if not self.is_paused:
 
             control.write_command(
@@ -1126,10 +1090,6 @@ class VirtualMouseUI:
             print(
                 "UI: Pause command sent."
             )
-
-        # =====================================================
-        # RESUME
-        # =====================================================
 
         else:
 
@@ -1193,6 +1153,8 @@ class VirtualMouseUI:
 
         self.is_paused = False
 
+        control.clear_status()
+
         # -----------------------------------------------------
         # RESET UI
         # -----------------------------------------------------
@@ -1245,6 +1207,177 @@ class VirtualMouseUI:
 
         print(
             "Virtual mouse engine stopped."
+        )
+
+    # =========================================================
+    # REAL-TIME STATUS
+    # =========================================================
+
+    def update_realtime_status(self):
+
+        if self.is_running:
+
+            # Check whether engine has exited
+            if (
+                self.engine_process is not None
+                and self.engine_process.poll() is not None
+            ):
+
+                self.is_running = False
+
+                self.engine_process = None
+
+                self.start_button.configure(
+                    state="normal"
+                )
+
+                self.pause_button.configure(
+                    state="disabled",
+                    text="PAUSE"
+                )
+
+                self.stop_button.configure(
+                    state="disabled"
+                )
+
+                self.header_status.configure(
+                    text="● READY",
+                    text_color="#3B82F6"
+                )
+
+                self.system_label.configure(
+                    text="● SYSTEM READY",
+                    text_color="#3B82F6"
+                )
+
+            else:
+
+                status = control.read_status()
+
+                # ---------------------------------------------
+                # CAMERA
+                # ---------------------------------------------
+
+                camera = status.get(
+                    "camera",
+                    "READY"
+                )
+
+                if camera == "ACTIVE":
+
+                    self.camera_status.configure(
+                        text="● ACTIVE",
+                        text_color="#22C55E"
+                    )
+
+                else:
+
+                    self.camera_status.configure(
+                        text="● READY",
+                        text_color="#3B82F6"
+                    )
+
+                # ---------------------------------------------
+                # HAND
+                # ---------------------------------------------
+
+                hand = status.get(
+                    "hand",
+                    "READY"
+                )
+
+                if hand == "DETECTED":
+
+                    self.hand_status.configure(
+                        text="● DETECTED",
+                        text_color="#22C55E"
+                    )
+
+                elif hand == "NOT DETECTED":
+
+                    self.hand_status.configure(
+                        text="● NOT DETECTED",
+                        text_color="#F59E0B"
+                    )
+
+                else:
+
+                    self.hand_status.configure(
+                        text="● READY",
+                        text_color="#3B82F6"
+                    )
+
+                # ---------------------------------------------
+                # CURSOR
+                # ---------------------------------------------
+
+                cursor = status.get(
+                    "cursor",
+                    "READY"
+                )
+
+                if cursor == "ACTIVE":
+
+                    self.cursor_status.configure(
+                        text="● ACTIVE",
+                        text_color="#22C55E"
+                    )
+
+                elif cursor == "PAUSED":
+
+                    self.cursor_status.configure(
+                        text="● PAUSED",
+                        text_color="#F59E0B"
+                    )
+
+                else:
+
+                    self.cursor_status.configure(
+                        text="● READY",
+                        text_color="#3B82F6"
+                    )
+
+                # ---------------------------------------------
+                # GESTURE
+                # ---------------------------------------------
+
+                gesture = status.get(
+                    "gesture",
+                    "None"
+                )
+
+                self.gesture_value.configure(
+                    text=gesture
+                )
+
+                # ---------------------------------------------
+                # FPS
+                # ---------------------------------------------
+
+                fps = status.get(
+                    "fps",
+                    0
+                )
+
+                try:
+
+                    fps = float(fps)
+
+                except Exception:
+
+                    fps = 0
+
+                self.fps_value.configure(
+                    text=f"{fps:.1f} FPS"
+                )
+
+        # =====================================================
+        # CHECK AGAIN
+        # =====================================================
+
+        self.root.after(
+            200,
+            self.update_realtime_status
         )
 
     # =========================================================
@@ -1338,7 +1471,7 @@ class VirtualMouseUI:
         )
 
     # =========================================================
-    # HIDE ALL PAGES
+    # HIDE PAGES
     # =========================================================
 
     def hide_pages(self):
