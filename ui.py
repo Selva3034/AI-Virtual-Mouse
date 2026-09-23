@@ -7,66 +7,88 @@ import control
 
 class VirtualMouseUI:
     def __init__(self):
-        # -----------------------------
+        # =====================================================
         # APP CONFIG
-        # -----------------------------
+        # =====================================================
+
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
 
         self.root = ctk.CTk()
         self.root.title("AI Virtual Mouse")
-        self.root.geometry("1100x700")
-        self.root.minsize(950, 600)
+        self.root.geometry("1180x760")
+        self.root.minsize(1000, 650)
 
         self.process = None
         self.running = False
 
-        # -----------------------------
-        # LOAD SETTINGS
-        # -----------------------------
         self.settings = control.read_settings()
 
-        # -----------------------------
+        # =====================================================
         # COLORS
-        # -----------------------------
-        self.bg_color = "#10141A"
-        self.sidebar_color = "#151A21"
-        self.card_color = "#1B222B"
-        self.border_color = "#2A333D"
-        self.text_color = "#FFFFFF"
-        self.secondary_text = "#9AA4AF"
-        self.success_color = "#2ECC71"
-        self.warning_color = "#F1C40F"
-        self.danger_color = "#E74C3C"
+        # =====================================================
 
-        self.root.configure(fg_color=self.bg_color)
+        self.BG = "#0B0F14"
+        self.SIDEBAR = "#10161D"
+        self.CARD = "#151C24"
+        self.CARD_HOVER = "#1C2631"
+        self.BORDER = "#27323D"
 
-        # -----------------------------
-        # MAIN LAYOUT
-        # -----------------------------
-        self.root.grid_columnconfigure(1, weight=1)
-        self.root.grid_rowconfigure(0, weight=1)
+        self.TEXT = "#F5F7FA"
+        self.MUTED = "#8C98A6"
+
+        self.BLUE = "#3B82F6"
+        self.BLUE_HOVER = "#2563EB"
+
+        self.GREEN = "#22C55E"
+        self.YELLOW = "#F59E0B"
+        self.RED = "#EF4444"
+
+        self.root.configure(
+            fg_color=self.BG
+        )
+
+        # =====================================================
+        # GRID
+        # =====================================================
+
+        self.root.grid_columnconfigure(
+            1,
+            weight=1
+        )
+
+        self.root.grid_rowconfigure(
+            0,
+            weight=1
+        )
+
+        # =====================================================
+        # CREATE UI
+        # =====================================================
 
         self.create_sidebar()
         self.create_main_area()
 
         self.show_dashboard()
 
-        # Start status monitoring
         self.update_realtime_status()
 
-        self.root.protocol("WM_DELETE_WINDOW", self.exit)
+        self.root.protocol(
+            "WM_DELETE_WINDOW",
+            self.exit
+        )
 
     # =========================================================
     # SIDEBAR
     # =========================================================
 
     def create_sidebar(self):
+
         self.sidebar = ctk.CTkFrame(
             self.root,
-            width=230,
+            width=245,
             corner_radius=0,
-            fg_color=self.sidebar_color
+            fg_color=self.SIDEBAR
         )
 
         self.sidebar.grid(
@@ -77,122 +99,270 @@ class VirtualMouseUI:
 
         self.sidebar.grid_propagate(False)
 
-        # Logo / title
-        self.logo_label = ctk.CTkLabel(
-            self.sidebar,
-            text="AI VIRTUAL\nMOUSE",
-            font=ctk.CTkFont(
-                size=24,
-                weight="bold"
-            ),
-            text_color=self.text_color
-        )
+        # -----------------------------------------------------
+        # BRAND
+        # -----------------------------------------------------
 
-        self.logo_label.pack(
-            pady=(35, 10)
-        )
-
-        self.version_label = ctk.CTkLabel(
-            self.sidebar,
-            text="Hand Gesture Control",
-            font=ctk.CTkFont(size=12),
-            text_color=self.secondary_text
-        )
-
-        self.version_label.pack(
-            pady=(0, 35)
-        )
-
-        # Navigation buttons
-        self.dashboard_button = self.create_nav_button(
-            "Dashboard",
-            self.show_dashboard
-        )
-
-        self.gesture_button = self.create_nav_button(
-            "Gesture Controls",
-            self.show_gestures
-        )
-
-        self.settings_button = self.create_nav_button(
-            "Settings",
-            self.show_settings
-        )
-
-        # Bottom area
-        self.sidebar_bottom = ctk.CTkFrame(
+        brand_frame = ctk.CTkFrame(
             self.sidebar,
             fg_color="transparent"
         )
 
-        self.sidebar_bottom.pack(
-            side="bottom",
+        brand_frame.pack(
             fill="x",
-            padx=20,
-            pady=25
+            padx=24,
+            pady=(30, 35)
         )
 
-        self.start_button = ctk.CTkButton(
-            self.sidebar_bottom,
-            text="START",
-            height=42,
-            corner_radius=8,
+        logo = ctk.CTkLabel(
+            brand_frame,
+            text="◉",
             font=ctk.CTkFont(
-                size=14,
+                size=34,
+                weight="bold"
+            ),
+            text_color=self.BLUE
+        )
+
+        logo.pack(
+            side="left",
+            padx=(0, 10)
+        )
+
+        brand_text = ctk.CTkFrame(
+            brand_frame,
+            fg_color="transparent"
+        )
+
+        brand_text.pack(
+            side="left"
+        )
+
+        ctk.CTkLabel(
+            brand_text,
+            text="AI VIRTUAL",
+            font=ctk.CTkFont(
+                size=16,
+                weight="bold"
+            ),
+            text_color=self.TEXT
+        ).pack(
+            anchor="w"
+        )
+
+        ctk.CTkLabel(
+            brand_text,
+            text="MOUSE",
+            font=ctk.CTkFont(
+                size=16,
+                weight="bold"
+            ),
+            text_color=self.BLUE
+        ).pack(
+            anchor="w"
+        )
+
+        # -----------------------------------------------------
+        # NAVIGATION TITLE
+        # -----------------------------------------------------
+
+        ctk.CTkLabel(
+            self.sidebar,
+            text="WORKSPACE",
+            font=ctk.CTkFont(
+                size=10,
+                weight="bold"
+            ),
+            text_color=self.MUTED
+        ).pack(
+            anchor="w",
+            padx=25,
+            pady=(0, 8)
+        )
+
+        # -----------------------------------------------------
+        # NAVIGATION
+        # -----------------------------------------------------
+
+        self.dashboard_button = self.create_nav_button(
+            "▣   Dashboard",
+            self.show_dashboard
+        )
+
+        self.gesture_button = self.create_nav_button(
+            "✋   Gesture Controls",
+            self.show_gestures
+        )
+
+        self.settings_button = self.create_nav_button(
+            "⚙   Settings",
+            self.show_settings
+        )
+
+        # -----------------------------------------------------
+        # SYSTEM STATUS
+        # -----------------------------------------------------
+
+        self.sidebar_status = ctk.CTkFrame(
+            self.sidebar,
+            fg_color=self.CARD,
+            corner_radius=12,
+            border_width=1,
+            border_color=self.BORDER
+        )
+
+        self.sidebar_status.pack(
+            side="bottom",
+            fill="x",
+            padx=18,
+            pady=(10, 20)
+        )
+
+        status_top = ctk.CTkFrame(
+            self.sidebar_status,
+            fg_color="transparent"
+        )
+
+        status_top.pack(
+            fill="x",
+            padx=15,
+            pady=(15, 5)
+        )
+
+        self.status_dot = ctk.CTkLabel(
+            status_top,
+            text="●",
+            font=ctk.CTkFont(size=12),
+            text_color=self.MUTED
+        )
+
+        self.status_dot.pack(
+            side="left",
+            padx=(0, 7)
+        )
+
+        ctk.CTkLabel(
+            status_top,
+            text="System",
+            font=ctk.CTkFont(
+                size=12,
+                weight="bold"
+            ),
+            text_color=self.TEXT
+        ).pack(
+            side="left"
+        )
+
+        self.sidebar_system_text = ctk.CTkLabel(
+            self.sidebar_status,
+            text="Ready",
+            font=ctk.CTkFont(size=11),
+            text_color=self.MUTED
+        )
+
+        self.sidebar_system_text.pack(
+            anchor="w",
+            padx=15,
+            pady=(0, 15)
+        )
+
+        # -----------------------------------------------------
+        # CONTROL BUTTONS
+        # -----------------------------------------------------
+
+        self.start_button = ctk.CTkButton(
+            self.sidebar,
+            text="▶  START",
+            height=42,
+            corner_radius=9,
+            fg_color=self.BLUE,
+            hover_color=self.BLUE_HOVER,
+            font=ctk.CTkFont(
+                size=13,
                 weight="bold"
             ),
             command=self.start
         )
 
         self.start_button.pack(
+            side="bottom",
             fill="x",
+            padx=18,
             pady=(0, 10)
         )
 
         self.pause_button = ctk.CTkButton(
-            self.sidebar_bottom,
-            text="PAUSE",
+            self.sidebar,
+            text="Ⅱ  PAUSE",
             height=38,
-            corner_radius=8,
-            fg_color="#34495E",
-            hover_color="#415A70",
+            corner_radius=9,
+            fg_color="#263341",
+            hover_color="#344454",
+            font=ctk.CTkFont(
+                size=12,
+                weight="bold"
+            ),
             command=self.pause
         )
 
         self.pause_button.pack(
+            side="bottom",
             fill="x",
-            pady=(0, 10)
+            padx=18,
+            pady=(0, 8)
         )
 
         self.stop_button = ctk.CTkButton(
-            self.sidebar_bottom,
-            text="STOP",
+            self.sidebar,
+            text="■  STOP",
             height=38,
-            corner_radius=8,
-            fg_color=self.danger_color,
-            hover_color="#C0392B",
+            corner_radius=9,
+            fg_color="#2A1A1D",
+            hover_color="#4A2025",
+            text_color="#FF7B84",
+            font=ctk.CTkFont(
+                size=12,
+                weight="bold"
+            ),
             command=self.stop
         )
 
-        self.stop_button.pack(fill="x")
+        self.stop_button.pack(
+            side="bottom",
+            fill="x",
+            padx=18,
+            pady=(0, 8)
+        )
 
-    def create_nav_button(self, text, command):
+    # =========================================================
+    # NAV BUTTON
+    # =========================================================
+
+    def create_nav_button(
+        self,
+        text,
+        command
+    ):
+
         button = ctk.CTkButton(
             self.sidebar,
             text=text,
-            height=42,
+            height=44,
             corner_radius=8,
             fg_color="transparent",
-            hover_color="#222A33",
+            hover_color=self.CARD_HOVER,
             anchor="w",
-            font=ctk.CTkFont(size=14),
+            font=ctk.CTkFont(
+                size=13
+            ),
+            text_color=self.MUTED,
             command=command
         )
 
         button.pack(
             fill="x",
             padx=15,
-            pady=4
+            pady=3
         )
 
         return button
@@ -202,9 +372,10 @@ class VirtualMouseUI:
     # =========================================================
 
     def create_main_area(self):
+
         self.main_area = ctk.CTkFrame(
             self.root,
-            fg_color=self.bg_color,
+            fg_color=self.BG,
             corner_radius=0
         )
 
@@ -224,7 +395,10 @@ class VirtualMouseUI:
             weight=1
         )
 
-        # Header
+        # -----------------------------------------------------
+        # HEADER
+        # -----------------------------------------------------
+
         self.header = ctk.CTkFrame(
             self.main_area,
             fg_color="transparent"
@@ -234,18 +408,34 @@ class VirtualMouseUI:
             row=0,
             column=0,
             sticky="ew",
-            padx=35,
+            padx=38,
             pady=(30, 10)
         )
 
-        self.page_title = ctk.CTkLabel(
+        self.header.grid_columnconfigure(
+            0,
+            weight=1
+        )
+
+        header_left = ctk.CTkFrame(
             self.header,
+            fg_color="transparent"
+        )
+
+        header_left.grid(
+            row=0,
+            column=0,
+            sticky="w"
+        )
+
+        self.page_title = ctk.CTkLabel(
+            header_left,
             text="Dashboard",
             font=ctk.CTkFont(
-                size=28,
+                size=30,
                 weight="bold"
             ),
-            text_color=self.text_color
+            text_color=self.TEXT
         )
 
         self.page_title.pack(
@@ -253,10 +443,12 @@ class VirtualMouseUI:
         )
 
         self.page_subtitle = ctk.CTkLabel(
-            self.header,
-            text="AI-powered hand gesture mouse control",
-            font=ctk.CTkFont(size=13),
-            text_color=self.secondary_text
+            header_left,
+            text="Control your computer with natural hand gestures",
+            font=ctk.CTkFont(
+                size=13
+            ),
+            text_color=self.MUTED
         )
 
         self.page_subtitle.pack(
@@ -264,7 +456,55 @@ class VirtualMouseUI:
             pady=(3, 0)
         )
 
-        # Content container
+        # Live indicator
+        self.live_badge = ctk.CTkFrame(
+            self.header,
+            fg_color=self.CARD,
+            corner_radius=20,
+            border_width=1,
+            border_color=self.BORDER
+        )
+
+        self.live_badge.grid(
+            row=0,
+            column=1,
+            sticky="e",
+            padx=(20, 0)
+        )
+
+        self.live_dot = ctk.CTkLabel(
+            self.live_badge,
+            text="●",
+            font=ctk.CTkFont(size=11),
+            text_color=self.MUTED
+        )
+
+        self.live_dot.pack(
+            side="left",
+            padx=(12, 5),
+            pady=8
+        )
+
+        self.live_text = ctk.CTkLabel(
+            self.live_badge,
+            text="SYSTEM READY",
+            font=ctk.CTkFont(
+                size=11,
+                weight="bold"
+            ),
+            text_color=self.MUTED
+        )
+
+        self.live_text.pack(
+            side="left",
+            padx=(0, 12),
+            pady=8
+        )
+
+        # -----------------------------------------------------
+        # CONTENT
+        # -----------------------------------------------------
+
         self.content = ctk.CTkScrollableFrame(
             self.main_area,
             fg_color="transparent"
@@ -274,35 +514,78 @@ class VirtualMouseUI:
             row=1,
             column=0,
             sticky="nsew",
-            padx=25,
-            pady=(10, 20)
+            padx=28,
+            pady=(5, 20)
         )
 
     # =========================================================
-    # PAGE MANAGEMENT
+    # PAGE HELPERS
     # =========================================================
 
     def clear_content(self):
+
         for widget in self.content.winfo_children():
             widget.destroy()
 
-    def update_page_header(self, title, subtitle):
-        self.page_title.configure(text=title)
-        self.page_subtitle.configure(text=subtitle)
+    def update_page_header(
+        self,
+        title,
+        subtitle
+    ):
+
+        self.page_title.configure(
+            text=title
+        )
+
+        self.page_subtitle.configure(
+            text=subtitle
+        )
+
+    def set_active_nav(self, active_button):
+
+        buttons = [
+            self.dashboard_button,
+            self.gesture_button,
+            self.settings_button
+        ]
+
+        for button in buttons:
+
+            if button == active_button:
+
+                button.configure(
+                    fg_color="#172B48",
+                    text_color="#60A5FA"
+                )
+
+            else:
+
+                button.configure(
+                    fg_color="transparent",
+                    text_color=self.MUTED
+                )
 
     # =========================================================
     # DASHBOARD
     # =========================================================
 
     def show_dashboard(self):
+
         self.clear_content()
+
+        self.set_active_nav(
+            self.dashboard_button
+        )
 
         self.update_page_header(
             "Dashboard",
-            "AI-powered hand gesture mouse control"
+            "Control your computer with natural hand gestures"
         )
 
-        # Status cards
+        # -----------------------------------------------------
+        # STATUS CARDS
+        # -----------------------------------------------------
+
         cards_frame = ctk.CTkFrame(
             self.content,
             fg_color="transparent"
@@ -310,348 +593,579 @@ class VirtualMouseUI:
 
         cards_frame.pack(
             fill="x",
-            pady=(10, 20)
+            pady=(10, 15)
         )
 
-        for i in range(3):
+        for i in range(4):
+
             cards_frame.grid_columnconfigure(
                 i,
                 weight=1
             )
 
-        self.camera_card = self.create_status_card(
+        self.camera_card = self.create_dashboard_card(
             cards_frame,
             0,
-            "Camera",
-            "READY"
+            "CAMERA",
+            "READY",
+            "●"
         )
 
-        self.hand_card = self.create_status_card(
+        self.hand_card = self.create_dashboard_card(
             cards_frame,
             1,
-            "Hand Tracking",
-            "READY"
+            "HAND TRACKING",
+            "READY",
+            "✋"
         )
 
-        self.cursor_card = self.create_status_card(
+        self.cursor_card = self.create_dashboard_card(
             cards_frame,
             2,
-            "Cursor",
-            "READY"
+            "CURSOR",
+            "READY",
+            "↗"
         )
 
-        # Runtime information
-        runtime_title = ctk.CTkLabel(
+        self.fps_card = self.create_dashboard_card(
+            cards_frame,
+            3,
+            "PERFORMANCE",
+            "0 FPS",
+            "◌"
+        )
+
+        # -----------------------------------------------------
+        # CURRENT GESTURE
+        # -----------------------------------------------------
+
+        gesture_section = ctk.CTkFrame(
             self.content,
-            text="Runtime Status",
-            font=ctk.CTkFont(
-                size=20,
-                weight="bold"
-            )
-        )
-
-        runtime_title.pack(
-            anchor="w",
-            pady=(10, 10)
-        )
-
-        runtime_card = ctk.CTkFrame(
-            self.content,
-            fg_color=self.card_color,
-            corner_radius=12,
+            fg_color=self.CARD,
+            corner_radius=15,
             border_width=1,
-            border_color=self.border_color
+            border_color=self.BORDER
         )
 
-        runtime_card.pack(
+        gesture_section.pack(
             fill="x",
-            pady=(0, 20)
+            pady=10
         )
 
-        runtime_card.grid_columnconfigure(
-            1,
-            weight=1
+        gesture_header = ctk.CTkFrame(
+            gesture_section,
+            fg_color="transparent"
         )
 
-        # Current gesture
+        gesture_header.pack(
+            fill="x",
+            padx=24,
+            pady=(20, 5)
+        )
+
         ctk.CTkLabel(
-            runtime_card,
-            text="Current Gesture",
-            font=ctk.CTkFont(size=13),
-            text_color=self.secondary_text
-        ).grid(
-            row=0,
-            column=0,
-            padx=20,
-            pady=18,
-            sticky="w"
+            gesture_header,
+            text="CURRENT GESTURE",
+            font=ctk.CTkFont(
+                size=11,
+                weight="bold"
+            ),
+            text_color=self.MUTED
+        ).pack(
+            side="left"
+        )
+
+        self.gesture_live_label = ctk.CTkLabel(
+            gesture_header,
+            text="LIVE",
+            font=ctk.CTkFont(
+                size=10,
+                weight="bold"
+            ),
+            text_color=self.GREEN
+        )
+
+        self.gesture_live_label.pack(
+            side="right"
         )
 
         self.gesture_value = ctk.CTkLabel(
-            runtime_card,
+            gesture_section,
             text="None",
             font=ctk.CTkFont(
-                size=16,
+                size=38,
                 weight="bold"
-            )
+            ),
+            text_color=self.TEXT
         )
 
-        self.gesture_value.grid(
-            row=0,
-            column=1,
-            padx=20,
-            pady=18,
-            sticky="e"
+        self.gesture_value.pack(
+            pady=(8, 5)
         )
 
-        # FPS
-        ctk.CTkLabel(
-            runtime_card,
-            text="FPS",
-            font=ctk.CTkFont(size=13),
-            text_color=self.secondary_text
-        ).grid(
-            row=1,
-            column=0,
-            padx=20,
-            pady=18,
-            sticky="w"
-        )
-
-        self.fps_value = ctk.CTkLabel(
-            runtime_card,
-            text="0",
+        self.gesture_hint = ctk.CTkLabel(
+            gesture_section,
+            text="Waiting for hand gesture...",
             font=ctk.CTkFont(
-                size=16,
-                weight="bold"
-            )
+                size=12
+            ),
+            text_color=self.MUTED
         )
 
-        self.fps_value.grid(
-            row=1,
-            column=1,
-            padx=20,
-            pady=18,
-            sticky="e"
+        self.gesture_hint.pack(
+            pady=(0, 22)
         )
 
-        # System status
+        # -----------------------------------------------------
+        # PERFORMANCE
+        # -----------------------------------------------------
+
+        performance_card = ctk.CTkFrame(
+            self.content,
+            fg_color=self.CARD,
+            corner_radius=15,
+            border_width=1,
+            border_color=self.BORDER
+        )
+
+        performance_card.pack(
+            fill="x",
+            pady=10
+        )
+
+        performance_top = ctk.CTkFrame(
+            performance_card,
+            fg_color="transparent"
+        )
+
+        performance_top.pack(
+            fill="x",
+            padx=24,
+            pady=(20, 10)
+        )
+
         ctk.CTkLabel(
-            runtime_card,
-            text="System Status",
-            font=ctk.CTkFont(size=13),
-            text_color=self.secondary_text
-        ).grid(
-            row=2,
-            column=0,
-            padx=20,
-            pady=18,
-            sticky="w"
-        )
-
-        self.system_value = ctk.CTkLabel(
-            runtime_card,
-            text="READY",
+            performance_top,
+            text="SYSTEM PERFORMANCE",
             font=ctk.CTkFont(
-                size=16,
+                size=11,
                 weight="bold"
-            )
+            ),
+            text_color=self.MUTED
+        ).pack(
+            side="left"
         )
 
-        self.system_value.grid(
-            row=2,
-            column=1,
-            padx=20,
-            pady=18,
-            sticky="e"
+        self.performance_fps = ctk.CTkLabel(
+            performance_top,
+            text="0 FPS",
+            font=ctk.CTkFont(
+                size=13,
+                weight="bold"
+            ),
+            text_color=self.BLUE
         )
 
-        # Instructions
-        info_title = ctk.CTkLabel(
+        self.performance_fps.pack(
+            side="right"
+        )
+
+        self.fps_progress = ctk.CTkProgressBar(
+            performance_card,
+            height=8,
+            corner_radius=5,
+            progress_color=self.BLUE,
+            fg_color="#222C36"
+        )
+
+        self.fps_progress.pack(
+            fill="x",
+            padx=24,
+            pady=(0, 20)
+        )
+
+        self.fps_progress.set(0)
+
+        # -----------------------------------------------------
+        # QUICK START
+        # -----------------------------------------------------
+
+        quick_title = ctk.CTkLabel(
             self.content,
             text="Quick Start",
             font=ctk.CTkFont(
-                size=20,
+                size=18,
                 weight="bold"
             )
         )
 
-        info_title.pack(
+        quick_title.pack(
             anchor="w",
-            pady=(5, 10)
+            pady=(20, 8)
         )
 
-        info_card = ctk.CTkFrame(
+        quick_card = ctk.CTkFrame(
             self.content,
-            fg_color=self.card_color,
-            corner_radius=12,
+            fg_color=self.CARD,
+            corner_radius=15,
             border_width=1,
-            border_color=self.border_color
+            border_color=self.BORDER
         )
 
-        info_card.pack(
+        quick_card.pack(
             fill="x"
         )
 
-        instructions = (
-            "1. Click START to launch the virtual mouse.\n"
-            "2. Place your hand in front of the camera.\n"
-            "3. Use your index finger to control the cursor.\n"
-            "4. Use the supported gestures for clicking and scrolling.\n"
-            "5. Press ESC in the camera window to stop safely."
-        )
+        steps = [
+            ("01", "Start", "Launch the virtual mouse"),
+            ("02", "Position", "Place your hand in front of the camera"),
+            ("03", "Control", "Use gestures to control your cursor"),
+            ("04", "Stop", "Press STOP when finished")
+        ]
 
-        ctk.CTkLabel(
-            info_card,
-            text=instructions,
-            justify="left",
-            anchor="w",
-            font=ctk.CTkFont(size=13),
-            text_color=self.secondary_text
-        ).pack(
-            padx=20,
-            pady=20,
-            anchor="w"
-        )
+        for number, title, description in steps:
 
-    def create_status_card(self, parent, column, title, value):
+            row = ctk.CTkFrame(
+                quick_card,
+                fg_color="transparent"
+            )
+
+            row.pack(
+                fill="x",
+                padx=20,
+                pady=10
+            )
+
+            number_label = ctk.CTkLabel(
+                row,
+                text=number,
+                width=38,
+                height=38,
+                corner_radius=19,
+                fg_color="#172B48",
+                text_color="#60A5FA",
+                font=ctk.CTkFont(
+                    size=11,
+                    weight="bold"
+                )
+            )
+
+            number_label.pack(
+                side="left",
+                padx=(0, 14)
+            )
+
+            text_frame = ctk.CTkFrame(
+                row,
+                fg_color="transparent"
+            )
+
+            text_frame.pack(
+                side="left"
+            )
+
+            ctk.CTkLabel(
+                text_frame,
+                text=title,
+                font=ctk.CTkFont(
+                    size=13,
+                    weight="bold"
+                ),
+                text_color=self.TEXT
+            ).pack(
+                anchor="w"
+            )
+
+            ctk.CTkLabel(
+                text_frame,
+                text=description,
+                font=ctk.CTkFont(
+                    size=11
+                ),
+                text_color=self.MUTED
+            ).pack(
+                anchor="w"
+            )
+
+    # =========================================================
+    # DASHBOARD STATUS CARD
+    # =========================================================
+
+    def create_dashboard_card(
+        self,
+        parent,
+        column,
+        title,
+        value,
+        icon
+    ):
+
         card = ctk.CTkFrame(
             parent,
-            fg_color=self.card_color,
-            corner_radius=12,
+            fg_color=self.CARD,
+            corner_radius=13,
             border_width=1,
-            border_color=self.border_color
+            border_color=self.BORDER
         )
 
         card.grid(
             row=0,
             column=column,
             sticky="ew",
-            padx=6
+            padx=5
+        )
+
+        top = ctk.CTkFrame(
+            card,
+            fg_color="transparent"
+        )
+
+        top.pack(
+            fill="x",
+            padx=15,
+            pady=(15, 4)
+        )
+
+        ctk.CTkLabel(
+            top,
+            text=icon,
+            font=ctk.CTkFont(
+                size=18
+            ),
+            text_color=self.BLUE
+        ).pack(
+            side="left"
         )
 
         ctk.CTkLabel(
             card,
             text=title,
-            font=ctk.CTkFont(size=13),
-            text_color=self.secondary_text
+            font=ctk.CTkFont(
+                size=10,
+                weight="bold"
+            ),
+            text_color=self.MUTED
         ).pack(
-            padx=18,
-            pady=(18, 5),
-            anchor="w"
+            anchor="w",
+            padx=15
         )
 
         value_label = ctk.CTkLabel(
             card,
             text=value,
             font=ctk.CTkFont(
-                size=20,
+                size=17,
                 weight="bold"
-            )
+            ),
+            text_color=self.TEXT
         )
 
         value_label.pack(
-            padx=18,
-            pady=(0, 18),
-            anchor="w"
+            anchor="w",
+            padx=15,
+            pady=(3, 15)
         )
 
         return value_label
 
     # =========================================================
-    # GESTURES PAGE
+    # GESTURE PAGE
     # =========================================================
 
     def show_gestures(self):
+
         self.clear_content()
+
+        self.set_active_nav(
+            self.gesture_button
+        )
 
         self.update_page_header(
             "Gesture Controls",
-            "Available hand gestures"
+            "Learn how to interact with your computer"
+        )
+
+        intro = ctk.CTkFrame(
+            self.content,
+            fg_color="#111D2B",
+            corner_radius=15,
+            border_width=1,
+            border_color="#1F3B60"
+        )
+
+        intro.pack(
+            fill="x",
+            pady=(10, 20)
+        )
+
+        ctk.CTkLabel(
+            intro,
+            text="✋",
+            font=ctk.CTkFont(
+                size=38
+            ),
+            text_color=self.BLUE
+        ).pack(
+            pady=(20, 5)
+        )
+
+        ctk.CTkLabel(
+            intro,
+            text="Control your computer naturally",
+            font=ctk.CTkFont(
+                size=18,
+                weight="bold"
+            )
+        ).pack()
+
+        ctk.CTkLabel(
+            intro,
+            text="Use these hand gestures to control the virtual mouse.",
+            font=ctk.CTkFont(
+                size=12
+            ),
+            text_color=self.MUTED
+        ).pack(
+            pady=(5, 20)
         )
 
         gestures = [
-            ("Index Finger", "Move the mouse cursor"),
-            ("Thumb + Index Pinch", "Left click"),
-            ("Quick Pinch Twice", "Double click"),
-            ("Hold Thumb + Index", "Drag"),
-            ("Index + Middle Pinch", "Right click"),
-            ("Two Fingers", "Scroll"),
-            ("Closed Fist", "Pause / Resume")
+            ("☝", "Index Finger", "Move Cursor",
+             "Move the cursor around the screen"),
+
+            ("👌", "Thumb + Index", "Left Click",
+             "Quick pinch to perform a left click"),
+
+            ("◎", "Quick Pinch ×2", "Double Click",
+             "Perform two quick pinches"),
+
+            ("🤏", "Hold Pinch", "Drag",
+             "Hold thumb and index together"),
+
+            ("✌", "Index + Middle", "Right Click",
+             "Pinch index and middle fingers"),
+
+            ("↕", "Two Fingers", "Scroll",
+             "Move two fingers vertically"),
+
+            ("✊", "Closed Fist", "Pause / Resume",
+             "Hold a closed fist to pause")
         ]
 
-        for gesture, action in gestures:
+        for icon, gesture, action, description in gestures:
+
             card = ctk.CTkFrame(
                 self.content,
-                fg_color=self.card_color,
-                corner_radius=10,
+                fg_color=self.CARD,
+                corner_radius=13,
                 border_width=1,
-                border_color=self.border_color
+                border_color=self.BORDER
             )
 
             card.pack(
                 fill="x",
-                pady=6
+                pady=5
             )
 
-            card.grid_columnconfigure(
-                0,
-                weight=1
+            icon_label = ctk.CTkLabel(
+                card,
+                text=icon,
+                width=55,
+                font=ctk.CTkFont(
+                    size=26
+                ),
+                text_color=self.BLUE
+            )
+
+            icon_label.pack(
+                side="left",
+                padx=(15, 5),
+                pady=15
+            )
+
+            text_frame = ctk.CTkFrame(
+                card,
+                fg_color="transparent"
+            )
+
+            text_frame.pack(
+                side="left",
+                fill="x",
+                expand=True,
+                pady=12
             )
 
             ctk.CTkLabel(
-                card,
+                text_frame,
                 text=gesture,
                 font=ctk.CTkFont(
-                    size=15,
+                    size=13,
                     weight="bold"
-                )
-            ).grid(
-                row=0,
-                column=0,
-                padx=20,
-                pady=16,
-                sticky="w"
+                ),
+                text_color=self.TEXT
+            ).pack(
+                anchor="w"
             )
 
             ctk.CTkLabel(
+                text_frame,
+                text=description,
+                font=ctk.CTkFont(
+                    size=11
+                ),
+                text_color=self.MUTED
+            ).pack(
+                anchor="w",
+                pady=(2, 0)
+            )
+
+            action_badge = ctk.CTkLabel(
                 card,
                 text=action,
-                font=ctk.CTkFont(size=13),
-                text_color=self.secondary_text
-            ).grid(
-                row=0,
-                column=1,
-                padx=20,
-                pady=16,
-                sticky="e"
+                height=30,
+                corner_radius=15,
+                fg_color="#172B48",
+                text_color="#60A5FA",
+                font=ctk.CTkFont(
+                    size=10,
+                    weight="bold"
+                )
+            )
+
+            action_badge.pack(
+                side="right",
+                padx=18
             )
 
     # =========================================================
-    # SETTINGS PAGE
+    # SETTINGS
     # =========================================================
 
     def show_settings(self):
+
         self.clear_content()
+
+        self.set_active_nav(
+            self.settings_button
+        )
 
         self.update_page_header(
             "Settings",
-            "Configure virtual mouse behaviour"
+            "Customize virtual mouse behaviour"
         )
 
-        # Refresh settings from file
         self.settings = control.read_settings()
 
-        # ---------------------------------------------
+        # -----------------------------------------------------
         # SETTINGS CARD
-        # ---------------------------------------------
+        # -----------------------------------------------------
 
         settings_card = ctk.CTkFrame(
             self.content,
-            fg_color=self.card_color,
-            corner_radius=12,
+            fg_color=self.CARD,
+            corner_radius=15,
             border_width=1,
-            border_color=self.border_color
+            border_color=self.BORDER
         )
 
         settings_card.pack(
@@ -659,266 +1173,104 @@ class VirtualMouseUI:
             pady=(10, 20)
         )
 
-        # ---------------------------------------------
-        # SMOOTHING
-        # ---------------------------------------------
-
         ctk.CTkLabel(
             settings_card,
-            text="Cursor Smoothing",
+            text="Mouse Behaviour",
             font=ctk.CTkFont(
-                size=15,
+                size=18,
                 weight="bold"
             )
         ).pack(
             anchor="w",
             padx=25,
-            pady=(25, 5)
+            pady=(25, 4)
         )
 
         ctk.CTkLabel(
             settings_card,
-            text="Controls how smoothly the cursor follows your finger.",
-            font=ctk.CTkFont(size=12),
-            text_color=self.secondary_text
-        ).pack(
-            anchor="w",
-            padx=25
-        )
-
-        smoothing_frame = ctk.CTkFrame(
-            settings_card,
-            fg_color="transparent"
-        )
-
-        smoothing_frame.pack(
-            fill="x",
-            padx=25,
-            pady=(15, 25)
-        )
-
-        smoothing_frame.grid_columnconfigure(
-            0,
-            weight=1
-        )
-
-        self.smoothing_slider = ctk.CTkSlider(
-            smoothing_frame,
-            from_=0.05,
-            to=1.0,
-            number_of_steps=95,
-            command=self.update_smoothing_value
-        )
-
-        self.smoothing_slider.grid(
-            row=0,
-            column=0,
-            sticky="ew",
-            padx=(0, 20)
-        )
-
-        self.smoothing_value = ctk.CTkLabel(
-            smoothing_frame,
-            text=f"{self.settings['smoothing']:.2f}",
-            width=50,
+            text="Fine-tune how gestures control your mouse.",
             font=ctk.CTkFont(
-                size=14,
-                weight="bold"
-            )
-        )
-
-        self.smoothing_value.grid(
-            row=0,
-            column=1
-        )
-
-        self.smoothing_slider.set(
-            float(self.settings["smoothing"])
-        )
-
-        # ---------------------------------------------
-        # SCROLL SPEED
-        # ---------------------------------------------
-
-        ctk.CTkLabel(
-            settings_card,
-            text="Scroll Speed",
-            font=ctk.CTkFont(
-                size=15,
-                weight="bold"
-            )
-        ).pack(
-            anchor="w",
-            padx=25,
-            pady=(5, 5)
-        )
-
-        ctk.CTkLabel(
-            settings_card,
-            text="Controls how fast the mouse scrolls.",
-            font=ctk.CTkFont(size=12),
-            text_color=self.secondary_text
-        ).pack(
-            anchor="w",
-            padx=25
-        )
-
-        scroll_frame = ctk.CTkFrame(
-            settings_card,
-            fg_color="transparent"
-        )
-
-        scroll_frame.pack(
-            fill="x",
-            padx=25,
-            pady=(15, 25)
-        )
-
-        scroll_frame.grid_columnconfigure(
-            0,
-            weight=1
-        )
-
-        self.scroll_slider = ctk.CTkSlider(
-            scroll_frame,
-            from_=1,
-            to=10,
-            number_of_steps=9,
-            command=self.update_scroll_value
-        )
-
-        self.scroll_slider.grid(
-            row=0,
-            column=0,
-            sticky="ew",
-            padx=(0, 20)
-        )
-
-        self.scroll_value = ctk.CTkLabel(
-            scroll_frame,
-            text=str(self.settings["scroll_speed"]),
-            width=50,
-            font=ctk.CTkFont(
-                size=14,
-                weight="bold"
-            )
-        )
-
-        self.scroll_value.grid(
-            row=0,
-            column=1
-        )
-
-        self.scroll_slider.set(
-            int(self.settings["scroll_speed"])
-        )
-
-        # ---------------------------------------------
-        # GESTURE CONFIRMATION
-        # ---------------------------------------------
-
-        ctk.CTkLabel(
-            settings_card,
-            text="Gesture Confirmation Frames",
-            font=ctk.CTkFont(
-                size=15,
-                weight="bold"
-            )
-        ).pack(
-            anchor="w",
-            padx=25,
-            pady=(5, 5)
-        )
-
-        ctk.CTkLabel(
-            settings_card,
-            text="Higher values reduce accidental gesture detection.",
-            font=ctk.CTkFont(size=12),
-            text_color=self.secondary_text
-        ).pack(
-            anchor="w",
-            padx=25
-        )
-
-        confirmation_frame = ctk.CTkFrame(
-            settings_card,
-            fg_color="transparent"
-        )
-
-        confirmation_frame.pack(
-            fill="x",
-            padx=25,
-            pady=(15, 25)
-        )
-
-        confirmation_frame.grid_columnconfigure(
-            0,
-            weight=1
-        )
-
-        self.confirmation_slider = ctk.CTkSlider(
-            confirmation_frame,
-            from_=1,
-            to=10,
-            number_of_steps=9,
-            command=self.update_confirmation_value
-        )
-
-        self.confirmation_slider.grid(
-            row=0,
-            column=0,
-            sticky="ew",
-            padx=(0, 20)
-        )
-
-        self.confirmation_value = ctk.CTkLabel(
-            confirmation_frame,
-            text=str(
-                self.settings[
-                    "gesture_confirmation_frames"
-                ]
+                size=12
             ),
-            width=50,
-            font=ctk.CTkFont(
-                size=14,
-                weight="bold"
-            )
+            text_color=self.MUTED
+        ).pack(
+            anchor="w",
+            padx=25,
+            pady=(0, 20)
         )
 
-        self.confirmation_value.grid(
-            row=0,
-            column=1
+        # -----------------------------------------------------
+        # SMOOTHING
+        # -----------------------------------------------------
+
+        self.create_setting_slider(
+            settings_card,
+            "Cursor Smoothing",
+            "Controls how smoothly the cursor follows your finger.",
+            0.05,
+            1.0,
+            float(self.settings["smoothing"]),
+            self.update_smoothing_value,
+            "smoothing"
         )
 
-        self.confirmation_slider.set(
+        # -----------------------------------------------------
+        # SCROLL
+        # -----------------------------------------------------
+
+        self.create_setting_slider(
+            settings_card,
+            "Scroll Speed",
+            "Controls the speed of vertical scrolling.",
+            1,
+            10,
+            int(self.settings["scroll_speed"]),
+            self.update_scroll_value,
+            "scroll"
+        )
+
+        # -----------------------------------------------------
+        # CONFIRMATION
+        # -----------------------------------------------------
+
+        self.create_setting_slider(
+            settings_card,
+            "Gesture Confirmation",
+            "Frames required before a gesture is confirmed.",
+            1,
+            10,
             int(
                 self.settings[
                     "gesture_confirmation_frames"
                 ]
-            )
+            ),
+            self.update_confirmation_value,
+            "confirmation"
         )
 
-        # ---------------------------------------------
+        # -----------------------------------------------------
         # BUTTONS
-        # ---------------------------------------------
+        # -----------------------------------------------------
 
-        button_frame = ctk.CTkFrame(
+        buttons = ctk.CTkFrame(
             self.content,
             fg_color="transparent"
         )
 
-        button_frame.pack(
-            fill="x",
-            pady=(0, 20)
+        buttons.pack(
+            fill="x"
         )
 
         self.apply_button = ctk.CTkButton(
-            button_frame,
-            text="APPLY SETTINGS",
+            buttons,
+            text="✓  APPLY SETTINGS",
             height=42,
-            corner_radius=8,
+            width=180,
+            corner_radius=9,
+            fg_color=self.BLUE,
+            hover_color=self.BLUE_HOVER,
             font=ctk.CTkFont(
-                size=13,
+                size=12,
                 weight="bold"
             ),
             command=self.apply_settings
@@ -930,12 +1282,17 @@ class VirtualMouseUI:
         )
 
         self.reset_button = ctk.CTkButton(
-            button_frame,
-            text="RESET DEFAULTS",
+            buttons,
+            text="↻  RESET DEFAULTS",
             height=42,
-            corner_radius=8,
-            fg_color="#34495E",
-            hover_color="#415A70",
+            width=170,
+            corner_radius=9,
+            fg_color="#263341",
+            hover_color="#344454",
+            font=ctk.CTkFont(
+                size=12,
+                weight="bold"
+            ),
             command=self.reset_settings
         )
 
@@ -943,50 +1300,205 @@ class VirtualMouseUI:
             side="left"
         )
 
-        # Status message
         self.settings_status = ctk.CTkLabel(
             self.content,
             text="",
-            font=ctk.CTkFont(size=13),
-            text_color=self.success_color
+            font=ctk.CTkFont(
+                size=12
+            )
         )
 
         self.settings_status.pack(
             anchor="w",
+            pady=(12, 5)
+        )
+
+    # =========================================================
+    # SETTING SLIDER
+    # =========================================================
+
+    def create_setting_slider(
+        self,
+        parent,
+        title,
+        description,
+        minimum,
+        maximum,
+        value,
+        callback,
+        slider_type
+    ):
+
+        container = ctk.CTkFrame(
+            parent,
+            fg_color="transparent"
+        )
+
+        container.pack(
+            fill="x",
+            padx=25,
+            pady=10
+        )
+
+        top = ctk.CTkFrame(
+            container,
+            fg_color="transparent"
+        )
+
+        top.pack(
+            fill="x"
+        )
+
+        ctk.CTkLabel(
+            top,
+            text=title,
+            font=ctk.CTkFont(
+                size=13,
+                weight="bold"
+            )
+        ).pack(
+            side="left"
+        )
+
+        if slider_type == "smoothing":
+
+            self.smoothing_value = ctk.CTkLabel(
+                top,
+                text=f"{value:.2f}",
+                font=ctk.CTkFont(
+                    size=13,
+                    weight="bold"
+                ),
+                text_color=self.BLUE
+            )
+
+        elif slider_type == "scroll":
+
+            self.scroll_value = ctk.CTkLabel(
+                top,
+                text=str(value),
+                font=ctk.CTkFont(
+                    size=13,
+                    weight="bold"
+                ),
+                text_color=self.BLUE
+            )
+
+        else:
+
+            self.confirmation_value = ctk.CTkLabel(
+                top,
+                text=str(value),
+                font=ctk.CTkFont(
+                    size=13,
+                    weight="bold"
+                ),
+                text_color=self.BLUE
+            )
+
+        if slider_type == "smoothing":
+            self.smoothing_value.pack(
+                side="right"
+            )
+
+        elif slider_type == "scroll":
+            self.scroll_value.pack(
+                side="right"
+            )
+
+        else:
+            self.confirmation_value.pack(
+                side="right"
+            )
+
+        ctk.CTkLabel(
+            container,
+            text=description,
+            font=ctk.CTkFont(
+                size=11
+            ),
+            text_color=self.MUTED
+        ).pack(
+            anchor="w",
+            pady=(3, 8)
+        )
+
+        slider = ctk.CTkSlider(
+            container,
+            from_=minimum,
+            to=maximum,
+            number_of_steps=(
+                95
+                if slider_type == "smoothing"
+                else int(maximum - minimum)
+            ),
+            command=callback,
+            progress_color=self.BLUE,
+            button_color=self.TEXT,
+            button_hover_color="#D7E0EA"
+        )
+
+        slider.pack(
+            fill="x",
             pady=(0, 10)
         )
+
+        slider.set(value)
+
+        if slider_type == "smoothing":
+            self.smoothing_slider = slider
+
+        elif slider_type == "scroll":
+            self.scroll_slider = slider
+
+        else:
+            self.confirmation_slider = slider
 
     # =========================================================
     # SETTINGS CALLBACKS
     # =========================================================
 
     def update_smoothing_value(self, value):
+
         self.smoothing_value.configure(
             text=f"{float(value):.2f}"
         )
 
     def update_scroll_value(self, value):
+
         self.scroll_value.configure(
             text=str(round(float(value)))
         )
 
     def update_confirmation_value(self, value):
+
         self.confirmation_value.configure(
             text=str(round(float(value)))
         )
 
+    # =========================================================
+    # APPLY SETTINGS
+    # =========================================================
+
     def apply_settings(self):
+
         smoothing = round(
-            float(self.smoothing_slider.get()),
+            float(
+                self.smoothing_slider.get()
+            ),
             2
         )
 
         scroll_speed = round(
-            float(self.scroll_slider.get())
+            float(
+                self.scroll_slider.get()
+            )
         )
 
         confirmation_frames = round(
-            float(self.confirmation_slider.get())
+            float(
+                self.confirmation_slider.get()
+            )
         )
 
         new_settings = {
@@ -995,22 +1507,37 @@ class VirtualMouseUI:
             "gesture_confirmation_frames": confirmation_frames
         }
 
-        if control.write_settings(new_settings):
-            self.settings = control.read_settings()
+        if control.write_settings(
+            new_settings
+        ):
+
+            self.settings = (
+                control.read_settings()
+            )
 
             self.settings_status.configure(
-                text="Settings saved successfully.",
-                text_color=self.success_color
+                text="✓ Settings saved successfully.",
+                text_color=self.GREEN
             )
+
         else:
+
             self.settings_status.configure(
-                text="Failed to save settings.",
-                text_color=self.danger_color
+                text="✕ Failed to save settings.",
+                text_color=self.RED
             )
+
+    # =========================================================
+    # RESET SETTINGS
+    # =========================================================
 
     def reset_settings(self):
+
         if control.reset_settings():
-            self.settings = control.read_settings()
+
+            self.settings = (
+                control.read_settings()
+            )
 
             self.smoothing_slider.set(
                 self.settings["smoothing"]
@@ -1045,16 +1572,18 @@ class VirtualMouseUI:
             )
 
             self.settings_status.configure(
-                text="Settings reset to defaults.",
-                text_color=self.success_color
+                text="✓ Settings restored to defaults.",
+                text_color=self.GREEN
             )
 
     # =========================================================
-    # START ENGINE
+    # START
     # =========================================================
 
     def start(self):
+
         if self.process is not None:
+
             if self.process.poll() is None:
                 return
 
@@ -1071,6 +1600,7 @@ class VirtualMouseUI:
         )
 
         try:
+
             self.process = subprocess.Popen(
                 [
                     sys.executable,
@@ -1082,38 +1612,69 @@ class VirtualMouseUI:
             self.running = True
 
             self.start_button.configure(
-                text="RUNNING",
+                text="●  RUNNING",
                 state="disabled"
             )
 
-            self.pause_button.configure(
-                text="PAUSE"
+            self.live_text.configure(
+                text="SYSTEM ACTIVE"
+            )
+
+            self.live_text.configure(
+                text_color=self.GREEN
+            )
+
+            self.live_dot.configure(
+                text_color=self.GREEN
+            )
+
+            self.status_dot.configure(
+                text_color=self.GREEN
+            )
+
+            self.sidebar_system_text.configure(
+                text="Virtual mouse is running",
+                text_color=self.GREEN
             )
 
         except Exception as error:
-            print(f"Could not start main.py: {error}")
+
+            print(
+                f"Could not start main.py: {error}"
+            )
 
     # =========================================================
     # PAUSE / RESUME
     # =========================================================
 
     def pause(self):
+
         if not self.running:
             return
 
         status = control.read_status()
 
-        if status.get("paused", False):
-            control.write_command("resume")
+        if status.get(
+            "paused",
+            False
+        ):
 
-            self.pause_button.configure(
-                text="PAUSE"
+            control.write_command(
+                "resume"
             )
-        else:
-            control.write_command("pause")
 
             self.pause_button.configure(
-                text="RESUME"
+                text="Ⅱ  PAUSE"
+            )
+
+        else:
+
+            control.write_command(
+                "pause"
+            )
+
+            self.pause_button.configure(
+                text="▶  RESUME"
             )
 
     # =========================================================
@@ -1121,13 +1682,22 @@ class VirtualMouseUI:
     # =========================================================
 
     def stop(self):
-        control.write_command("stop")
+
+        control.write_command(
+            "stop"
+        )
 
         if self.process is not None:
+
             try:
+
                 self.process.terminate()
-                self.process.wait(timeout=2)
+                self.process.wait(
+                    timeout=2
+                )
+
             except Exception:
+
                 try:
                     self.process.kill()
                 except Exception:
@@ -1140,38 +1710,99 @@ class VirtualMouseUI:
         control.clear_status()
 
         self.start_button.configure(
-            text="START",
+            text="▶  START",
             state="normal"
         )
 
         self.pause_button.configure(
-            text="PAUSE"
+            text="Ⅱ  PAUSE"
         )
 
-        # Reset dashboard display
-        if hasattr(self, "camera_card"):
-            self.camera_card.configure(text="READY")
+        self.live_text.configure(
+            text="SYSTEM READY",
+            text_color=self.MUTED
+        )
 
-        if hasattr(self, "hand_card"):
-            self.hand_card.configure(text="READY")
+        self.live_dot.configure(
+            text_color=self.MUTED
+        )
 
-        if hasattr(self, "cursor_card"):
-            self.cursor_card.configure(text="READY")
+        self.status_dot.configure(
+            text_color=self.MUTED
+        )
 
-        if hasattr(self, "gesture_value"):
-            self.gesture_value.configure(text="None")
+        self.sidebar_system_text.configure(
+            text="Ready",
+            text_color=self.MUTED
+        )
 
-        if hasattr(self, "fps_value"):
-            self.fps_value.configure(text="0")
+        if hasattr(
+            self,
+            "camera_card"
+        ):
 
-        if hasattr(self, "system_value"):
-            self.system_value.configure(text="READY")
+            self.camera_card.configure(
+                text="READY"
+            )
+
+        if hasattr(
+            self,
+            "hand_card"
+        ):
+
+            self.hand_card.configure(
+                text="READY"
+            )
+
+        if hasattr(
+            self,
+            "cursor_card"
+        ):
+
+            self.cursor_card.configure(
+                text="READY"
+            )
+
+        if hasattr(
+            self,
+            "fps_card"
+        ):
+
+            self.fps_card.configure(
+                text="0 FPS"
+            )
+
+        if hasattr(
+            self,
+            "gesture_value"
+        ):
+
+            self.gesture_value.configure(
+                text="None"
+            )
+
+        if hasattr(
+            self,
+            "performance_fps"
+        ):
+
+            self.performance_fps.configure(
+                text="0 FPS"
+            )
+
+        if hasattr(
+            self,
+            "fps_progress"
+        ):
+
+            self.fps_progress.set(0)
 
     # =========================================================
     # REAL-TIME STATUS
     # =========================================================
 
     def update_realtime_status(self):
+
         status = control.read_status()
 
         camera = status.get(
@@ -1204,75 +1835,191 @@ class VirtualMouseUI:
             False
         )
 
-        # Update dashboard if widgets exist
-        if hasattr(self, "camera_card"):
+        # -----------------------------------------------------
+        # DASHBOARD CARDS
+        # -----------------------------------------------------
+
+        if hasattr(
+            self,
+            "camera_card"
+        ):
+
             self.camera_card.configure(
                 text=camera
             )
 
-        if hasattr(self, "hand_card"):
+        if hasattr(
+            self,
+            "hand_card"
+        ):
+
             self.hand_card.configure(
                 text=hand
             )
 
-        if hasattr(self, "cursor_card"):
+        if hasattr(
+            self,
+            "cursor_card"
+        ):
+
             self.cursor_card.configure(
                 text=cursor
             )
 
-        if hasattr(self, "gesture_value"):
+        if hasattr(
+            self,
+            "fps_card"
+        ):
+
+            self.fps_card.configure(
+                text=f"{round(float(fps))} FPS"
+            )
+
+        # -----------------------------------------------------
+        # GESTURE
+        # -----------------------------------------------------
+
+        if hasattr(
+            self,
+            "gesture_value"
+        ):
+
             self.gesture_value.configure(
                 text=gesture
             )
 
-        if hasattr(self, "fps_value"):
-            self.fps_value.configure(
-                text=str(round(float(fps)))
+        if hasattr(
+            self,
+            "gesture_hint"
+        ):
+
+            if gesture == "None":
+                self.gesture_hint.configure(
+                    text="Waiting for hand gesture..."
+                )
+
+            elif gesture == "NO HAND":
+                self.gesture_hint.configure(
+                    text="Place your hand in front of the camera"
+                )
+
+            elif gesture == "PAUSED":
+                self.gesture_hint.configure(
+                    text="Virtual mouse is paused"
+                )
+
+            else:
+                self.gesture_hint.configure(
+                    text="Gesture detected successfully"
+                )
+
+        # -----------------------------------------------------
+        # FPS
+        # -----------------------------------------------------
+
+        if hasattr(
+            self,
+            "performance_fps"
+        ):
+
+            self.performance_fps.configure(
+                text=f"{round(float(fps))} FPS"
             )
 
-        if hasattr(self, "system_value"):
-            if paused:
-                self.system_value.configure(
-                    text="PAUSED",
-                    text_color=self.warning_color
-                )
+        if hasattr(
+            self,
+            "fps_progress"
+        ):
 
-            elif self.running:
-                self.system_value.configure(
-                    text="RUNNING",
-                    text_color=self.success_color
-                )
+            progress = min(
+                max(
+                    float(fps) / 60,
+                    0
+                ),
+                1
+            )
 
-            else:
-                self.system_value.configure(
-                    text="READY",
-                    text_color=self.text_color
-                )
+            self.fps_progress.set(
+                progress
+            )
 
-        # Keep pause button synchronized
-        if self.running:
-            if paused:
-                self.pause_button.configure(
-                    text="RESUME"
-                )
-            else:
-                self.pause_button.configure(
-                    text="PAUSE"
-                )
+        # -----------------------------------------------------
+        # SYSTEM STATE
+        # -----------------------------------------------------
 
-        # Check whether process has ended
+        if paused:
+
+            self.live_text.configure(
+                text="SYSTEM PAUSED",
+                text_color=self.YELLOW
+            )
+
+            self.live_dot.configure(
+                text_color=self.YELLOW
+            )
+
+            self.status_dot.configure(
+                text_color=self.YELLOW
+            )
+
+            self.sidebar_system_text.configure(
+                text="Virtual mouse paused",
+                text_color=self.YELLOW
+            )
+
+        elif self.running:
+
+            self.live_text.configure(
+                text="SYSTEM ACTIVE",
+                text_color=self.GREEN
+            )
+
+            self.live_dot.configure(
+                text_color=self.GREEN
+            )
+
+            self.status_dot.configure(
+                text_color=self.GREEN
+            )
+
+            self.sidebar_system_text.configure(
+                text="Virtual mouse is running",
+                text_color=self.GREEN
+            )
+
+        else:
+
+            self.live_text.configure(
+                text="SYSTEM READY",
+                text_color=self.MUTED
+            )
+
+            self.live_dot.configure(
+                text_color=self.MUTED
+            )
+
+            self.status_dot.configure(
+                text_color=self.MUTED
+            )
+
+        # -----------------------------------------------------
+        # PROCESS CHECK
+        # -----------------------------------------------------
+
         if self.process is not None:
+
             if self.process.poll() is not None:
+
                 self.process = None
                 self.running = False
 
                 self.start_button.configure(
-                    text="START",
+                    text="▶  START",
                     state="normal"
                 )
 
                 self.pause_button.configure(
-                    text="PAUSE"
+                    text="Ⅱ  PAUSE"
                 )
 
         self.root.after(
@@ -1285,6 +2032,7 @@ class VirtualMouseUI:
     # =========================================================
 
     def exit(self):
+
         self.stop()
 
         try:
@@ -1297,13 +2045,15 @@ class VirtualMouseUI:
     # =========================================================
 
     def run(self):
+
         self.root.mainloop()
 
 
 # =============================================================
-# APPLICATION START
+# APPLICATION ENTRY POINT
 # =============================================================
 
 if __name__ == "__main__":
+
     app = VirtualMouseUI()
     app.run()
