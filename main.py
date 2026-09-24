@@ -106,6 +106,7 @@ WINDOW_NAME = getattr(
 # ============================================================
 
 def distance(point1, point2):
+
     if point1 is None or point2 is None:
         return 999
 
@@ -121,6 +122,7 @@ def confirm_gesture(
     gesture_count,
     required_frames
 ):
+
     if current_gesture == last_gesture:
         gesture_count += 1
     else:
@@ -129,6 +131,356 @@ def confirm_gesture(
     confirmed = gesture_count >= required_frames
 
     return current_gesture, gesture_count, confirmed
+
+
+# ============================================================
+# VISUALIZATION HELPERS
+# ============================================================
+
+def draw_hand_visualization(
+    frame,
+    landmarks,
+    gesture
+):
+
+    """
+    Draw enhanced hand visualization:
+
+    - Hand bounding box
+    - Fingertip markers
+    - Fingertip labels
+    - Current gesture badge
+    """
+
+    if not landmarks:
+        return frame
+
+    height, width, _ = frame.shape
+
+    # --------------------------------------------------------
+    # GET ALL HAND POINTS
+    # --------------------------------------------------------
+
+    points = []
+
+    for landmark in landmarks:
+
+        points.append(
+            (
+                int(landmark.x * width),
+                int(landmark.y * height)
+            )
+        )
+
+    # --------------------------------------------------------
+    # HAND BOUNDING BOX
+    # --------------------------------------------------------
+
+    if points:
+
+        x_values = [
+            point[0]
+            for point in points
+        ]
+
+        y_values = [
+            point[1]
+            for point in points
+        ]
+
+        x_min = max(
+            0,
+            min(x_values) - 15
+        )
+
+        x_max = min(
+            width - 1,
+            max(x_values) + 15
+        )
+
+        y_min = max(
+            0,
+            min(y_values) - 15
+        )
+
+        y_max = min(
+            height - 1,
+            max(y_values) + 15
+        )
+
+        cv2.rectangle(
+            frame,
+            (x_min, y_min),
+            (x_max, y_max),
+            (140, 80, 255),
+            2
+        )
+
+    # --------------------------------------------------------
+    # FINGERTIPS
+    # --------------------------------------------------------
+
+    fingertips = {
+        4: "Thumb",
+        8: "Index",
+        12: "Middle",
+        16: "Ring",
+        20: "Pinky"
+    }
+
+    for landmark_id, label in fingertips.items():
+
+        if landmark_id >= len(landmarks):
+            continue
+
+        landmark = landmarks[landmark_id]
+
+        x = int(
+            landmark.x * width
+        )
+
+        y = int(
+            landmark.y * height
+        )
+
+        # Outer circle
+
+        cv2.circle(
+            frame,
+            (x, y),
+            9,
+            (255, 255, 255),
+            -1
+        )
+
+        # Inner border
+
+        cv2.circle(
+            frame,
+            (x, y),
+            9,
+            (255, 0, 180),
+            2
+        )
+
+        # Label
+
+        cv2.putText(
+            frame,
+            label,
+            (x + 10, y - 8),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.45,
+            (255, 255, 255),
+            1,
+            cv2.LINE_AA
+        )
+
+    # --------------------------------------------------------
+    # GESTURE BADGE COLOR
+    # --------------------------------------------------------
+
+    if gesture == "PAUSED":
+
+        badge_color = (
+            0,
+            180,
+            255
+        )
+
+    elif gesture in (
+        "NO HAND",
+        "Detecting..."
+    ):
+
+        badge_color = (
+            150,
+            150,
+            150
+        )
+
+    elif gesture == "None":
+
+        badge_color = (
+            120,
+            120,
+            120
+        )
+
+    else:
+
+        badge_color = (
+            80,
+            220,
+            120
+        )
+
+    # --------------------------------------------------------
+    # GESTURE BADGE
+    # --------------------------------------------------------
+
+    cv2.rectangle(
+        frame,
+        (
+            width - 330,
+            20
+        ),
+        (
+            width - 20,
+            68
+        ),
+        badge_color,
+        -1
+    )
+
+    cv2.putText(
+        frame,
+        str(gesture),
+        (
+            width - 315,
+            52
+        ),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.7,
+        (255, 255, 255),
+        2,
+        cv2.LINE_AA
+    )
+
+    return frame
+
+
+def draw_status_panel(
+    frame,
+    camera_status,
+    hand_status,
+    cursor_status,
+    fps,
+    paused,
+    smoothing,
+    scroll_speed
+):
+
+    """
+    Draw live system information on the camera preview.
+    """
+
+    panel_width = 245
+
+    # --------------------------------------------------------
+    # TRANSPARENT PANEL
+    # --------------------------------------------------------
+
+    overlay = frame.copy()
+
+    cv2.rectangle(
+        overlay,
+        (15, 160),
+        (
+            15 + panel_width,
+            335
+        ),
+        (15, 15, 25),
+        -1
+    )
+
+    frame[:] = cv2.addWeighted(
+        overlay,
+        0.78,
+        frame,
+        0.22,
+        0
+    )
+
+    # --------------------------------------------------------
+    # STATUS VALUES
+    # --------------------------------------------------------
+
+    rows = [
+        (
+            "CAMERA",
+            camera_status
+        ),
+        (
+            "HAND",
+            hand_status
+        ),
+        (
+            "CURSOR",
+            cursor_status
+        ),
+        (
+            "FPS",
+            f"{fps:.1f}"
+        ),
+        (
+            "SMOOTHING",
+            f"{smoothing:.2f}"
+        ),
+        (
+            "SCROLL",
+            str(scroll_speed)
+        )
+    ]
+
+    y = 188
+
+    # --------------------------------------------------------
+    # DRAW ROWS
+    # --------------------------------------------------------
+
+    for label, value in rows:
+
+        cv2.putText(
+            frame,
+            label,
+            (30, y),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.48,
+            (160, 160, 180),
+            1,
+            cv2.LINE_AA
+        )
+
+        cv2.putText(
+            frame,
+            str(value),
+            (130, y),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.48,
+            (255, 255, 255),
+            1,
+            cv2.LINE_AA
+        )
+
+        y += 26
+
+    # --------------------------------------------------------
+    # PAUSE INDICATOR
+    # --------------------------------------------------------
+
+    if paused:
+
+        cv2.rectangle(
+            frame,
+            (15, 350),
+            (260, 400),
+            (40, 40, 180),
+            -1
+        )
+
+        cv2.putText(
+            frame,
+            "MOUSE PAUSED",
+            (35, 383),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.65,
+            (255, 255, 255),
+            2,
+            cv2.LINE_AA
+        )
+
+    return frame
 
 
 # ============================================================
@@ -164,33 +516,69 @@ def main():
         )
     )
 
-    # Safety limits
+    # --------------------------------------------------------
+    # SAFETY LIMITS
+    # --------------------------------------------------------
+
     smoothing = max(
         0.05,
-        min(1.0, smoothing)
+        min(
+            1.0,
+            smoothing
+        )
     )
 
     scroll_speed = max(
         1,
-        min(10, scroll_speed)
+        min(
+            10,
+            scroll_speed
+        )
     )
 
     gesture_confirmation_frames = max(
         1,
-        min(10, gesture_confirmation_frames)
+        min(
+            10,
+            gesture_confirmation_frames
+        )
     )
 
-    print("========================================")
-    print("      AI VIRTUAL MOUSE")
-    print("========================================")
+    # --------------------------------------------------------
+    # START MESSAGE
+    # --------------------------------------------------------
+
+    print(
+        "========================================"
+    )
+
+    print(
+        "      AI VIRTUAL MOUSE"
+    )
+
+    print(
+        "========================================"
+    )
+
     print()
-    print("Loaded settings:")
-    print(f"Smoothing: {smoothing}")
-    print(f"Scroll Speed: {scroll_speed}")
+
+    print(
+        "Loaded settings:"
+    )
+
+    print(
+        f"Smoothing: {smoothing}"
+    )
+
+    print(
+        f"Scroll Speed: {scroll_speed}"
+    )
+
     print(
         "Gesture Confirmation Frames: "
         f"{gesture_confirmation_frames}"
     )
+
     print()
 
     # --------------------------------------------------------
@@ -213,7 +601,10 @@ def main():
     )
 
     if not cap.isOpened():
-        print("ERROR: Could not open camera.")
+
+        print(
+            "ERROR: Could not open camera."
+        )
 
         control.write_status(
             camera="ERROR",
@@ -254,6 +645,7 @@ def main():
     # --------------------------------------------------------
 
     last_gesture = "None"
+
     gesture_count = 0
 
     # --------------------------------------------------------
@@ -261,9 +653,11 @@ def main():
     # --------------------------------------------------------
 
     last_click_time = 0
+
     last_action_time = 0
 
     pinch_start_time = None
+
     pinch_was_active = False
 
     # --------------------------------------------------------
@@ -277,6 +671,7 @@ def main():
     # --------------------------------------------------------
 
     dragging = False
+
     drag_start_time = None
 
     # --------------------------------------------------------
@@ -284,7 +679,9 @@ def main():
     # --------------------------------------------------------
 
     paused = False
+
     fist_start_time = None
+
     fist_active = False
 
     # --------------------------------------------------------
@@ -316,8 +713,14 @@ def main():
         700
     )
 
-    print("Virtual mouse started.")
-    print("Press ESC to exit.")
+    print(
+        "Virtual mouse started."
+    )
+
+    print(
+        "Press ESC to exit."
+    )
+
     print()
 
     # ========================================================
@@ -339,7 +742,9 @@ def main():
                 paused = True
 
                 if dragging:
+
                     pyautogui.mouseUp()
+
                     dragging = False
 
                 control.clear_command()
@@ -347,11 +752,13 @@ def main():
             elif command == "resume":
 
                 paused = False
+
                 control.clear_command()
 
             elif command == "stop":
 
                 control.clear_command()
+
                 break
 
             # ------------------------------------------------
@@ -361,6 +768,7 @@ def main():
             success, frame = cap.read()
 
             if not success:
+
                 control.write_status(
                     camera="ERROR",
                     hand="ERROR",
@@ -372,7 +780,10 @@ def main():
 
                 continue
 
-            # Mirror camera
+            # ------------------------------------------------
+            # MIRROR CAMERA
+            # ------------------------------------------------
+
             frame = cv2.flip(
                 frame,
                 1
@@ -390,7 +801,10 @@ def main():
                 results
             )
 
-            # Draw landmarks
+            # ------------------------------------------------
+            # DRAW MEDIAPIPE LANDMARKS
+            # ------------------------------------------------
+
             tracker.draw_landmarks(
                 frame,
                 results
@@ -427,10 +841,13 @@ def main():
                 # ---------------------------------------------
 
                 thumb_tip = landmarks[4]
+
                 index_tip = landmarks[8]
+
                 middle_tip = landmarks[12]
 
                 index_mcp = landmarks[5]
+
                 middle_mcp = landmarks[9]
 
                 # ---------------------------------------------
@@ -452,15 +869,17 @@ def main():
                 # ---------------------------------------------
 
                 index_up = (
-                    index_tip.y < index_mcp.y
+                    index_tip.y
+                    < index_mcp.y
                 )
 
                 middle_up = (
-                    middle_tip.y < middle_mcp.y
+                    middle_tip.y
+                    < middle_mcp.y
                 )
 
                 # ---------------------------------------------
-                # CLOSED FIST DETECTION
+                # CLOSED FIST
                 # ---------------------------------------------
 
                 fingers_down = (
@@ -475,25 +894,31 @@ def main():
                 if fingers_down:
 
                     if fist_start_time is None:
+
                         fist_start_time = time.time()
 
                     if (
-                        time.time() - fist_start_time
+                        time.time()
+                        - fist_start_time
                         >= PAUSE_HOLD_TIME
                     ):
 
                         if not fist_active:
 
                             paused = not paused
+
                             fist_active = True
 
                             if paused and dragging:
+
                                 pyautogui.mouseUp()
+
                                 dragging = False
 
                 else:
 
                     fist_start_time = None
+
                     fist_active = False
 
                 # =================================================
@@ -523,6 +948,7 @@ def main():
                         )
 
                         # Smoothing
+
                         current_x = (
                             previous_x
                             + (
@@ -550,6 +976,7 @@ def main():
                         )
 
                         # Keep cursor inside screen
+
                         current_x = max(
                             0,
                             min(
@@ -573,6 +1000,7 @@ def main():
                         )
 
                         previous_x = current_x
+
                         previous_y = current_y
 
                         current_gesture = "MOVE"
@@ -589,6 +1017,7 @@ def main():
                     if pinch_active:
 
                         if pinch_start_time is None:
+
                             pinch_start_time = time.time()
 
                         pinch_duration = (
@@ -596,9 +1025,9 @@ def main():
                             - pinch_start_time
                         )
 
-                        # -----------------------------
+                        # -----------------------------------------
                         # DRAG
-                        # -----------------------------
+                        # -----------------------------------------
 
                         if (
                             pinch_duration
@@ -608,6 +1037,7 @@ def main():
                             if not dragging:
 
                                 pyautogui.mouseDown()
+
                                 dragging = True
 
                             current_gesture = "DRAG"
@@ -618,18 +1048,19 @@ def main():
 
                     else:
 
-                        # -----------------------------
+                        # -----------------------------------------
                         # RELEASE DRAG
-                        # -----------------------------
+                        # -----------------------------------------
 
                         if dragging:
 
                             pyautogui.mouseUp()
+
                             dragging = False
 
-                        # -----------------------------
+                        # -----------------------------------------
                         # QUICK PINCH CLICK
-                        # -----------------------------
+                        # -----------------------------------------
 
                         if pinch_was_active:
 
@@ -660,6 +1091,7 @@ def main():
                                         ):
 
                                             # Double click
+
                                             if (
                                                 now
                                                 - last_click_time
@@ -673,6 +1105,7 @@ def main():
                                                 pyautogui.click()
 
                                             last_click_time = now
+
                                             last_action_time = now
 
                             pinch_start_time = None
@@ -728,12 +1161,10 @@ def main():
                                 > SCROLL_THRESHOLD
                             ):
 
-                                scroll_amount = (
-                                    int(
-                                        movement
-                                        * 100
-                                        * scroll_speed
-                                    )
+                                scroll_amount = int(
+                                    movement
+                                    * 100
+                                    * scroll_speed
                                 )
 
                                 scroll_amount = max(
@@ -771,11 +1202,15 @@ def main():
                 if dragging:
 
                     pyautogui.mouseUp()
+
                     dragging = False
 
                 pinch_start_time = None
+
                 pinch_was_active = False
+
                 right_pinch_was_active = False
+
                 previous_index_y = None
 
                 current_gesture = "NO HAND"
@@ -796,8 +1231,11 @@ def main():
             )
 
             if not confirmed:
+
                 displayed_gesture = "Detecting..."
+
             else:
+
                 displayed_gesture = current_gesture
 
             # =================================================
@@ -834,60 +1272,51 @@ def main():
             )
 
             # =================================================
-            # ON-SCREEN INFORMATION
+            # ENHANCED CAMERA VISUALIZATION
             # =================================================
+
+            draw_hand_visualization(
+                frame,
+                landmarks,
+                displayed_gesture
+            )
+
+            draw_status_panel(
+                frame,
+                camera_status,
+                hand_status,
+                cursor_status,
+                fps,
+                paused,
+                smoothing,
+                scroll_speed
+            )
+
+            # ------------------------------------------------
+            # HEADER
+            # ------------------------------------------------
 
             cv2.putText(
                 frame,
-                f"Gesture: {displayed_gesture}",
+                "AI VIRTUAL MOUSE",
                 (20, 40),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.8,
                 (255, 255, 255),
-                2
+                2,
+                cv2.LINE_AA
             )
 
             cv2.putText(
                 frame,
-                f"FPS: {int(fps)}",
+                "ESC = Exit",
                 (20, 75),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                0.7,
-                (255, 255, 255),
-                2
+                0.55,
+                (190, 190, 210),
+                1,
+                cv2.LINE_AA
             )
-
-            cv2.putText(
-                frame,
-                f"Smoothing: {smoothing:.2f}",
-                (20, 110),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.6,
-                (255, 255, 255),
-                2
-            )
-
-            cv2.putText(
-                frame,
-                f"Scroll: {scroll_speed}",
-                (20, 140),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.6,
-                (255, 255, 255),
-                2
-            )
-
-            if paused:
-
-                cv2.putText(
-                    frame,
-                    "PAUSED",
-                    (20, 185),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    1.0,
-                    (0, 0, 255),
-                    3
-                )
 
             # =================================================
             # SHOW FRAME
@@ -905,13 +1334,16 @@ def main():
             key = cv2.waitKey(1) & 0xFF
 
             # ESC
+
             if key == 27:
 
                 break
 
     except KeyboardInterrupt:
 
-        print("Stopped by user.")
+        print(
+            "Stopped by user."
+        )
 
     except Exception as error:
 
@@ -937,27 +1369,40 @@ def main():
         if dragging:
 
             try:
+
                 pyautogui.mouseUp()
+
             except Exception:
+
                 pass
 
         try:
+
             tracker.close()
+
         except Exception:
+
             pass
 
         try:
+
             cap.release()
+
         except Exception:
+
             pass
 
         cv2.destroyAllWindows()
 
         control.clear_command()
+
         control.clear_status()
 
         print()
-        print("Virtual mouse stopped safely.")
+
+        print(
+            "Virtual mouse stopped safely."
+        )
 
 
 # ============================================================
@@ -965,4 +1410,5 @@ def main():
 # ============================================================
 
 if __name__ == "__main__":
+
     main()
