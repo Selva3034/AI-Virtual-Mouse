@@ -4,6 +4,9 @@ import sys
 import os
 import time
 
+import cv2
+from PIL import Image
+
 import control
 
 
@@ -80,9 +83,16 @@ class VirtualMouseUI(ctk.CTk):
         self.running = False
         self.paused = False
 
+        self.preview_capture = None
+        self.preview_running = False
+        self.preview_image = None
+        self.preview_width = 640
+        self.preview_height = 360
+
         self.current_page = "Dashboard"
 
         self.setup_ui()
+        self.show_dashboard()
 
         self.update_dashboard()
 
@@ -640,10 +650,10 @@ class VirtualMouseUI(ctk.CTk):
         )
 
         # ----------------------------------------------------
-        # GESTURE CARD
+        # CAMERA PREVIEW
         # ----------------------------------------------------
 
-        gesture_panel = ctk.CTkFrame(
+        camera_panel = ctk.CTkFrame(
             middle,
             fg_color=CARD,
             corner_radius=20,
@@ -651,16 +661,27 @@ class VirtualMouseUI(ctk.CTk):
             border_color=BORDER
         )
 
-        gesture_panel.grid(
+        camera_panel.grid(
             row=0,
             column=0,
             sticky="nsew",
             padx=(0, 10)
         )
 
-        gesture_title = ctk.CTkLabel(
-            gesture_panel,
-            text="CURRENT GESTURE",
+        camera_header = ctk.CTkFrame(
+            camera_panel,
+            fg_color="transparent"
+        )
+
+        camera_header.pack(
+            fill="x",
+            padx=20,
+            pady=(15, 5)
+        )
+
+        camera_title = ctk.CTkLabel(
+            camera_header,
+            text="LIVE CAMERA PREVIEW",
             font=ctk.CTkFont(
                 size=12,
                 weight="bold"
@@ -668,83 +689,58 @@ class VirtualMouseUI(ctk.CTk):
             text_color=MUTED
         )
 
-        gesture_title.pack(
-            pady=(25, 5)
+        camera_title.pack(
+            side="left"
         )
 
-        self.gesture_value = ctk.CTkLabel(
-            gesture_panel,
-            text="None",
-            font=ctk.CTkFont(
-                size=42,
-                weight="bold"
-            ),
-            text_color=PURPLE_LIGHT
-        )
-
-        self.gesture_value.pack(
-            pady=(15, 10)
-        )
-
-        self.gesture_description = ctk.CTkLabel(
-            gesture_panel,
-            text="Waiting for hand gesture...",
-            font=ctk.CTkFont(
-                size=14
-            ),
-            text_color=MUTED
-        )
-
-        self.gesture_description.pack()
-
-        # ----------------------------------------------------
-        # PERFORMANCE
-        # ----------------------------------------------------
-
-        perf_title = ctk.CTkLabel(
-            gesture_panel,
-            text="SYSTEM PERFORMANCE",
+        self.preview_status = ctk.CTkLabel(
+            camera_header,
+            text="● IDLE",
             font=ctk.CTkFont(
                 size=11,
                 weight="bold"
             ),
+            text_color=GREEN
+        )
+
+        self.preview_status.pack(
+            side="right"
+        )
+
+        self.preview_label = ctk.CTkLabel(
+            camera_panel,
+            text="Opening camera preview...",
+            font=ctk.CTkFont(
+                size=15,
+                weight="bold"
+            ),
+            text_color=MUTED,
+            fg_color="#0D101C",
+            corner_radius=12
+        )
+
+        self.preview_label.pack(
+            padx=20,
+            pady=(8, 10),
+            fill="both",
+            expand=True
+        )
+
+        self.preview_info = ctk.CTkLabel(
+            camera_panel,
+            text="Preview is available while the Virtual Mouse is stopped.",
+            font=ctk.CTkFont(
+                size=11
+            ),
             text_color=MUTED
         )
 
-        perf_title.pack(
-            pady=(45, 8)
-        )
-
-        self.performance_bar = ctk.CTkProgressBar(
-            gesture_panel,
-            width=400,
-            height=12,
-            corner_radius=8,
-            progress_color=CYAN
-        )
-
-        self.performance_bar.pack(
-            padx=30
-        )
-
-        self.performance_bar.set(0)
-
-        self.performance_text = ctk.CTkLabel(
-            gesture_panel,
-            text="0 FPS",
-            font=ctk.CTkFont(
-                size=12,
-                weight="bold"
-            ),
-            text_color=CYAN
-        )
-
-        self.performance_text.pack(
-            pady=8
+        self.preview_info.pack(
+            pady=(0, 15)
         )
 
         # ----------------------------------------------------
-        # QUICK ACTIONS
+        # QUICK ACTIONS + GESTURE
         # ----------------------------------------------------
 
         action_panel = ctk.CTkFrame(
@@ -764,7 +760,7 @@ class VirtualMouseUI(ctk.CTk):
 
         action_title = ctk.CTkLabel(
             action_panel,
-            text="QUICK ACTIONS",
+            text="CURRENT GESTURE",
             font=ctk.CTkFont(
                 size=12,
                 weight="bold"
@@ -773,13 +769,96 @@ class VirtualMouseUI(ctk.CTk):
         )
 
         action_title.pack(
-            pady=(25, 20)
+            pady=(22, 5)
+        )
+
+        self.gesture_value = ctk.CTkLabel(
+            action_panel,
+            text="None",
+            font=ctk.CTkFont(
+                size=30,
+                weight="bold"
+            ),
+            text_color=PURPLE_LIGHT
+        )
+
+        self.gesture_value.pack(
+            pady=(5, 3)
+        )
+
+        self.gesture_description = ctk.CTkLabel(
+            action_panel,
+            text="Waiting for hand gesture...",
+            font=ctk.CTkFont(
+                size=11
+            ),
+            text_color=MUTED
+        )
+
+        self.gesture_description.pack(
+            pady=(0, 15)
+        )
+
+        perf_title = ctk.CTkLabel(
+            action_panel,
+            text="SYSTEM PERFORMANCE",
+            font=ctk.CTkFont(
+                size=10,
+                weight="bold"
+            ),
+            text_color=MUTED
+        )
+
+        perf_title.pack(
+            pady=(5, 8)
+        )
+
+        self.performance_bar = ctk.CTkProgressBar(
+            action_panel,
+            height=10,
+            corner_radius=8,
+            progress_color=CYAN
+        )
+
+        self.performance_bar.pack(
+            padx=25,
+            fill="x"
+        )
+
+        self.performance_bar.set(0)
+
+        self.performance_text = ctk.CTkLabel(
+            action_panel,
+            text="0 FPS",
+            font=ctk.CTkFont(
+                size=11,
+                weight="bold"
+            ),
+            text_color=CYAN
+        )
+
+        self.performance_text.pack(
+            pady=(6, 15)
+        )
+
+        action_separator = ctk.CTkLabel(
+            action_panel,
+            text="QUICK ACTIONS",
+            font=ctk.CTkFont(
+                size=10,
+                weight="bold"
+            ),
+            text_color=MUTED
+        )
+
+        action_separator.pack(
+            pady=(5, 8)
         )
 
         self.quick_start = ctk.CTkButton(
             action_panel,
             text="▶  Start Mouse",
-            height=48,
+            height=43,
             corner_radius=12,
             fg_color=GREEN,
             hover_color="#16A34A",
@@ -788,14 +867,14 @@ class VirtualMouseUI(ctk.CTk):
 
         self.quick_start.pack(
             padx=25,
-            pady=8,
+            pady=6,
             fill="x"
         )
 
         self.quick_pause = ctk.CTkButton(
             action_panel,
             text="Ⅱ  Pause",
-            height=48,
+            height=43,
             corner_radius=12,
             fg_color=YELLOW,
             hover_color="#D97706",
@@ -804,14 +883,14 @@ class VirtualMouseUI(ctk.CTk):
 
         self.quick_pause.pack(
             padx=25,
-            pady=8,
+            pady=6,
             fill="x"
         )
 
         self.quick_stop = ctk.CTkButton(
             action_panel,
             text="■  Stop",
-            height=48,
+            height=43,
             corner_radius=12,
             fg_color=RED,
             hover_color="#DC2626",
@@ -820,9 +899,214 @@ class VirtualMouseUI(ctk.CTk):
 
         self.quick_stop.pack(
             padx=25,
-            pady=8,
+            pady=6,
             fill="x"
         )
+
+        self.preview_info_action = ctk.CTkLabel(
+            action_panel,
+            text="Camera preview pauses when the mouse engine starts.",
+            font=ctk.CTkFont(
+                size=10
+            ),
+            text_color=MUTED,
+            wraplength=210
+        )
+
+        self.preview_info_action.pack(
+            padx=20,
+            pady=(12, 10)
+        )
+
+        self.start_preview()
+
+
+    # ========================================================
+    # CAMERA PREVIEW
+    # ========================================================
+
+    def start_preview(self):
+
+        if self.running:
+            return
+
+        if self.preview_capture is not None:
+            return
+
+        try:
+            self.preview_capture = cv2.VideoCapture(
+                0,
+                cv2.CAP_DSHOW
+            )
+
+            if not self.preview_capture.isOpened():
+                self.preview_capture.release()
+                self.preview_capture = None
+
+                if hasattr(self, "preview_label"):
+                    self.preview_label.configure(
+                        text="Camera preview unavailable.\nCheck your webcam.",
+                        image=None
+                    )
+
+                if hasattr(self, "preview_status"):
+                    self.preview_status.configure(
+                        text="● OFFLINE",
+                        text_color=RED
+                    )
+
+                return
+
+            self.preview_capture.set(
+                cv2.CAP_PROP_FRAME_WIDTH,
+                self.preview_width
+            )
+
+            self.preview_capture.set(
+                cv2.CAP_PROP_FRAME_HEIGHT,
+                self.preview_height
+            )
+
+            self.preview_running = True
+
+            if hasattr(self, "preview_status"):
+                self.preview_status.configure(
+                    text="● LIVE",
+                    text_color=GREEN
+                )
+
+            if hasattr(self, "preview_info"):
+                self.preview_info.configure(
+                    text="Camera preview active. Start Mouse to begin gesture control."
+                )
+
+            self.update_preview()
+
+        except Exception as error:
+
+            self.preview_capture = None
+            self.preview_running = False
+
+            if hasattr(self, "preview_status"):
+                self.preview_status.configure(
+                    text="● ERROR",
+                    text_color=RED
+                )
+
+            if hasattr(self, "preview_label"):
+                self.preview_label.configure(
+                    text=f"Camera error: {error}",
+                    image=None
+                )
+
+
+    def stop_preview(self):
+
+        self.preview_running = False
+
+        if self.preview_capture is not None:
+
+            try:
+                self.preview_capture.release()
+            except Exception:
+                pass
+
+        self.preview_capture = None
+
+
+    def update_preview(self):
+
+        if not self.preview_running:
+            return
+
+        if self.running:
+            self.stop_preview()
+            return
+
+        try:
+
+            if self.preview_capture is None:
+                return
+
+            success, frame = self.preview_capture.read()
+
+            if not success:
+                if hasattr(self, "preview_status"):
+                    self.preview_status.configure(
+                        text="● NO SIGNAL",
+                        text_color=RED
+                    )
+
+                self.after(
+                    500,
+                    self.update_preview
+                )
+
+                return
+
+            frame = cv2.flip(
+                frame,
+                1
+            )
+
+            # Add a simple preview overlay.
+            cv2.rectangle(
+                frame,
+                (10, 10),
+                (190, 48),
+                (10, 14, 28),
+                -1
+            )
+
+            cv2.putText(
+                frame,
+                "CAMERA PREVIEW",
+                (22, 36),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.55,
+                (255, 255, 255),
+                1,
+                cv2.LINE_AA
+            )
+
+            frame_rgb = cv2.cvtColor(
+                frame,
+                cv2.COLOR_BGR2RGB
+            )
+
+            image = Image.fromarray(
+                frame_rgb
+            )
+
+            image.thumbnail(
+                (self.preview_width, self.preview_height)
+            )
+
+            self.preview_image = ctk.CTkImage(
+                light_image=image,
+                dark_image=image,
+                size=(image.width, image.height)
+            )
+
+            self.preview_label.configure(
+                image=self.preview_image,
+                text=""
+            )
+
+            if hasattr(self, "preview_status"):
+                self.preview_status.configure(
+                    text="● LIVE",
+                    text_color=GREEN
+                )
+
+        except Exception:
+            pass
+
+        if self.preview_running:
+            self.after(
+                40,
+                self.update_preview
+            )
 
 
     # ========================================================
@@ -913,6 +1197,7 @@ class VirtualMouseUI(ctk.CTk):
 
     def show_gestures(self):
 
+        self.stop_preview()
         self.current_page = "Gestures"
 
         self.page_title.configure(
@@ -1070,6 +1355,7 @@ class VirtualMouseUI(ctk.CTk):
 
     def show_settings(self):
 
+        self.stop_preview()
         self.current_page = "Settings"
 
         self.page_title.configure(
@@ -1513,6 +1799,9 @@ class VirtualMouseUI(ctk.CTk):
         # Launch
         # ----------------------------------------------------
 
+        # Release the dashboard preview camera before main.py opens it.
+        self.stop_preview()
+
         try:
 
             self.process = subprocess.Popen(
@@ -1540,6 +1829,23 @@ class VirtualMouseUI(ctk.CTk):
             self.pause_button.configure(
                 text="Ⅱ   PAUSE"
             )
+
+            if hasattr(self, "preview_status"):
+                self.preview_status.configure(
+                    text="● MOUSE ACTIVE",
+                    text_color=GREEN
+                )
+
+            if hasattr(self, "preview_label"):
+                self.preview_label.configure(
+                    text="Virtual Mouse is running.\n\nThe main camera window is active.",
+                    image=None
+                )
+
+            if hasattr(self, "preview_info"):
+                self.preview_info.configure(
+                    text="Camera preview is paused while the mouse engine is active."
+                )
 
             self.show_message(
                 "Virtual Mouse started.",
@@ -1739,6 +2045,9 @@ class VirtualMouseUI(ctk.CTk):
 
         self.reset_ui_state()
 
+        if self.current_page == "Dashboard":
+            self.start_preview()
+
         self.show_message(
             "Virtual Mouse stopped.",
             RED
@@ -1881,6 +2190,9 @@ class VirtualMouseUI(ctk.CTk):
                     control.clear_command()
 
                     self.reset_ui_state()
+
+                    if self.current_page == "Dashboard":
+                        self.start_preview()
 
             # ------------------------------------------------
             # Dashboard widgets
